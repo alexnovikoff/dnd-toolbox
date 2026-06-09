@@ -2,7 +2,7 @@
 
 A GM tool hub: one launcher, a shared design system, and pluggable modules. This
 wiki is the project handbook. The styling **source of truth** is
-[`DESIGN_SYSTEM.md`](https://github.com/) at the repo root — this wiki explains
+[`DESIGN_SYSTEM.md`](https://github.com/alexnovikoff/dnd-toolbox/blob/main/DESIGN_SYSTEM.md) at the repo root — this wiki explains
 how the pieces fit together and how to extend them.
 
 ## Start here

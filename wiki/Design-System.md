@@ -1,7 +1,7 @@
 # Design System (`@dnd/design-system`)
 
 The single source of styling for the hub and every module. The authoritative
-spec is [`DESIGN_SYSTEM.md`](https://github.com/) at the repo root (high-fidelity,
+spec is [`DESIGN_SYSTEM.md`](https://github.com/alexnovikoff/dnd-toolbox/blob/main/DESIGN_SYSTEM.md) at the repo root (high-fidelity,
 final values); this page covers how to **use** it in code.
 
 ## Tokens as CSS variables
