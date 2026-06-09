@@ -72,3 +72,4 @@ Smoke-check in dev (no key needed):
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
 - "Don't touch casually" zones: token-creator `frames.js` and character-forge `i18n.js` (10 languages).
 - Desktop-first: the ~680px module column needs viewport ≳1100px beside the 232px sidebar; narrower clips horizontally — widen before responsive/screenshot checks.
+- **Never `git add -A` / `git add .`** — stage explicit paths (`git add <file>`). A stray SSH key once got swept into a commit this way; keys/secrets are gitignored but don't rely on it.
