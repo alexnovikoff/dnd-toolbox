@@ -1,0 +1,64 @@
+/* tokens.css — design tokens as CSS variables (DESIGN_SYSTEM.md §9).
+ *
+ * Neutral tokens are static per theme (data-theme="dark|light").
+ * Accent-derived tokens (--ds-accent*, --ds-glow, --ds-line, --ds-on-accent)
+ * default to gold here and are overwritten at runtime by ThemeProvider from
+ * the chosen accent via makePalette().
+ */
+
+:root {
+  /* fonts */
+  --ds-font-serif: 'Cinzel', Georgia, serif;
+  --ds-font-sans: 'Public Sans', system-ui, sans-serif;
+
+  /* default accent = gold / dark (runtime overwrites these) */
+  --ds-accent: #c9a84c;
+  --ds-accent-bright: #e6cd84;
+  --ds-glow: rgba(201, 168, 76, 0.16);
+  --ds-line: rgba(201, 168, 76, 0.26);
+  --ds-on-accent: #14100a;
+
+  /* status / feedback */
+  --ds-danger: #e0726a;
+}
+
+:root[data-theme='dark'] {
+  --ds-bg: #0f0d0a;
+  --ds-panel: #171310;
+  --ds-raised: #211a13;
+  --ds-text: #ece3d0;
+  --ds-muted: #9a8e77;
+  --ds-faint: #6b6253;
+  --ds-line2: rgba(236, 227, 208, 0.07);
+  --ds-on-accent: #14100a;
+  --ds-danger: #e0726a;
+}
+
+:root[data-theme='light'] {
+  --ds-bg: #ece3cf;
+  --ds-panel: #f6efde;
+  --ds-raised: #fdf8ec;
+  --ds-text: #2c2318;
+  --ds-muted: #6f6250;
+  --ds-faint: #9c8e76;
+  --ds-line2: rgba(60, 45, 20, 0.08);
+  --ds-on-accent: #fff8ec;
+  --ds-danger: #b3402a;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  background: var(--ds-bg);
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}

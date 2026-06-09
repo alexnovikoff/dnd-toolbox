@@ -1,0 +1,382 @@
+// CharacterForge.jsx — multilingual D&D character generator.
+// Ported from the standalone dnd-character-generator; all chrome now uses the
+// design system, and generation goes through the server proxy (./api.js).
+import { useState, useCallback } from 'react';
+import { Icon, Button, Field, Select, ToggleGroup, SANS, SERIF } from '@dnd/design-system';
+import {
+  UI,
+  LANGUAGES,
+  SECTIONS,
+  SECTION_ICONS,
+  SECTION_EMOJI,
+  RACES,
+  CLASSES,
+  FIRST_NAMES,
+  LAST_NAMES,
+  rand,
+  sanitize,
+} from './i18n.js';
+import { generateCharacter, regenerateSection } from './api.js';
+
+function Dice({ onClick, label }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="ddtb-btn"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: 'none',
+        background: 'transparent',
+        color: 'var(--ds-muted)',
+        cursor: 'pointer',
+        padding: 2,
+      }}
+    >
+      <Icon name="dice" size={18} />
+    </button>
+  );
+}
+
+const card = {
+  background: 'var(--ds-panel)',
+  border: '1px solid var(--ds-line2)',
+  borderRadius: 14,
+  padding: 24,
+};
+
+export default function CharacterForge() {
+  const [lang, setLang] = useState('ru');
+  const [name, setName] = useState('');
+  const [race, setRace] = useState('');
+  const [cls, setCls] = useState('');
+  const [vibe, setVibe] = useState('');
+  const [gender, setGender] = useState('male');
+  const [length, setLength] = useState('normal');
+  const [character, setCharacter] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [regenLoading, setRegenLoading] = useState({});
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const t = UI[lang];
+
+  const generate = useCallback(async () => {
+    const sName = sanitize(name);
+    const sRace = sanitize(race);
+    const sCls = sanitize(cls);
+    const sVibe = sanitize(vibe);
+    if (!sName && !sRace && !sCls) {
+      setError(t.error);
+      return;
+    }
+    setError('');
+    setLoading(true);
+    setCharacter(null);
+    try {
+      const fields = await generateCharacter({
+        name: sName,
+        race: sRace,
+        cls: sCls,
+        vibe: sVibe,
+        gender,
+        length,
+        lang,
+      });
+      setCharacter({ ...fields, name: sName, race: sRace, cls: sCls });
+    } catch (e) {
+      setError(e?.message || 'Something went wrong. Please try again.');
+    }
+    setLoading(false);
+  }, [name, race, cls, vibe, lang, gender, length, t]);
+
+  const regenSection = useCallback(
+    async (sec) => {
+      if (!character) return;
+      setRegenLoading((p) => ({ ...p, [sec]: true }));
+      try {
+        const fields = await regenerateSection({ section: sec, character, gender, length, lang });
+        setCharacter((p) => ({ ...p, ...fields }));
+      } catch {
+        /* keep previous content on failure */
+      }
+      setRegenLoading((p) => ({ ...p, [sec]: false }));
+    },
+    [character, lang, gender, length]
+  );
+
+  const copyAll = useCallback(async () => {
+    if (!character) return;
+    const txt = `${character.name || '?'} — ${character.race || '?'} ${character.cls || '?'}
+
+${SECTION_EMOJI.backstory} ${t.sections.backstory}: ${character.backstory}
+${SECTION_EMOJI.personality} ${t.sections.personality}: ${character.personality}
+${SECTION_EMOJI.goals} ${t.sections.goals}: ${character.goals}
+${SECTION_EMOJI.flaws} ${t.sections.flaws}: ${character.flaws}
+${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_desire}`;
+    try {
+      await navigator.clipboard.writeText(txt);
+    } catch {
+      const el = document.createElement('textarea');
+      el.value = txt;
+      el.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [character, t]);
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        overflow: 'auto',
+        background: 'var(--ds-bg)',
+        color: 'var(--ds-text)',
+        padding: '24px 16px',
+      }}
+    >
+      <div style={{ maxWidth: 680, margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <h1
+            style={{
+              margin: 0,
+              fontFamily: SERIF,
+              fontSize: 30,
+              fontWeight: 700,
+              color: 'var(--ds-accent)',
+              letterSpacing: '.04em',
+            }}
+          >
+            {t.title}
+          </h1>
+          <p style={{ margin: '8px 0 14px', color: 'var(--ds-muted)', fontSize: 14 }}>{t.subtitle}</p>
+          <div style={{ display: 'inline-flex', minWidth: 200 }}>
+            <Select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              options={LANGUAGES.map((l) => ({ value: l.code, label: `${l.flag} ${l.label}` }))}
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+
+        {/* Input card */}
+        <div style={{ ...card, marginBottom: 24 }}>
+          <Field
+            label={t.name}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Kael Duskmantle"
+            right={<Dice label={t.randomAll} onClick={() => setName(`${rand(FIRST_NAMES)} ${rand(LAST_NAMES)}`)} />}
+            style={{ marginBottom: 14 }}
+          />
+          <Field
+            label={t.race}
+            value={race}
+            onChange={(e) => setRace(e.target.value)}
+            placeholder="Tiefling"
+            right={<Dice label={t.race} onClick={() => setRace(rand(RACES))} />}
+            style={{ marginBottom: 14 }}
+          />
+          <Field
+            label={t.cls}
+            value={cls}
+            onChange={(e) => setCls(e.target.value)}
+            placeholder="Warlock"
+            right={<Dice label={t.cls} onClick={() => setCls(rand(CLASSES))} />}
+            style={{ marginBottom: 14 }}
+          />
+          <Field
+            label={t.vibe}
+            hint={t.vibeOpt}
+            value={vibe}
+            onChange={(e) => setVibe(e.target.value)}
+            placeholder={t.vibePlaceholder}
+            style={{ marginBottom: 14 }}
+          />
+
+          <div style={{ marginBottom: 14 }}>
+            <div style={LABEL}>{t.gender}</div>
+            <ToggleGroup
+              options={['male', 'female', 'other']}
+              value={gender}
+              onChange={setGender}
+              labels={{ male: t.male, female: t.female, other: t.other }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <div style={LABEL}>{t.length}</div>
+            <ToggleGroup
+              options={['short', 'normal', 'long']}
+              value={length}
+              onChange={setLength}
+              labels={{ short: t.short, normal: t.normal, long: t.long }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setName(`${rand(FIRST_NAMES)} ${rand(LAST_NAMES)}`);
+                setRace(rand(RACES));
+                setCls(rand(CLASSES));
+              }}
+            >
+              {t.randomAll}
+            </Button>
+            <Button onClick={generate} disabled={loading} style={{ flex: 1, fontSize: 15, padding: '12px 24px' }}>
+              {loading ? t.generating : t.generate}
+            </Button>
+          </div>
+          {error && <p style={{ margin: '12px 0 0', color: 'var(--ds-danger)', fontSize: 13 }}>{error}</p>}
+        </div>
+
+        {/* Loading */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--ds-muted)' }}>
+            <div style={{ fontSize: 32, animation: 'ddtb-pulse 1.5s infinite' }}>🔮</div>
+            <p style={{ marginTop: 12 }}>{t.fates}</p>
+          </div>
+        )}
+
+        {/* Character card */}
+        {character && !loading && (
+          <div
+            style={{
+              animation: 'ddtb-fadeIn 0.4s ease',
+              background: 'var(--ds-panel)',
+              border: '1px solid var(--ds-line)',
+              borderRadius: 14,
+              padding: 28,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: 24,
+                flexWrap: 'wrap',
+                gap: 12,
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0, fontFamily: SERIF, fontSize: 24, color: 'var(--ds-accent)' }}>
+                  {character.name || '—'}
+                </h2>
+                <p style={{ margin: '4px 0 0', color: 'var(--ds-muted)', fontSize: 14 }}>
+                  {[character.race, character.cls].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button variant="secondary" onClick={copyAll} style={{ padding: '8px 16px' }}>
+                  {copied ? t.copied : t.copyAll}
+                </Button>
+                <Button variant="secondary" onClick={generate} style={{ padding: '8px 16px' }}>
+                  {t.redo}
+                </Button>
+              </div>
+            </div>
+
+            {SECTIONS.map((sec) => (
+              <div
+                key={sec}
+                style={{
+                  background: 'var(--ds-raised)',
+                  borderRadius: 10,
+                  padding: 18,
+                  marginBottom: 14,
+                  border: '1px solid var(--ds-line2)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 10,
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      letterSpacing: '.06em',
+                      textTransform: 'uppercase',
+                      color: 'var(--ds-accent)',
+                      fontFamily: SANS,
+                    }}
+                  >
+                    <Icon name={SECTION_ICONS[sec]} size={15} /> {t.sections[sec]}
+                  </h3>
+                  <button
+                    onClick={() => regenSection(sec)}
+                    disabled={regenLoading[sec]}
+                    className="ddtb-btn"
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: 6,
+                      border: '1px solid var(--ds-line2)',
+                      background: 'transparent',
+                      color: 'var(--ds-muted)',
+                      cursor: regenLoading[sec] ? 'not-allowed' : 'pointer',
+                      fontSize: 12,
+                      fontFamily: SANS,
+                    }}
+                  >
+                    {regenLoading[sec] ? '…' : t.redo}
+                  </button>
+                </div>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'var(--ds-text)' }}>
+                  {regenLoading[sec] ? (
+                    <span style={{ animation: 'ddtb-pulse 1s infinite', display: 'inline-block' }}>…</span>
+                  ) : (
+                    character[sec]
+                  )}
+                </p>
+              </div>
+            ))}
+
+            <Button
+              variant="secondary"
+              onClick={generate}
+              style={{
+                width: '100%',
+                marginTop: 8,
+                padding: 12,
+                border: '1px solid var(--ds-line)',
+                color: 'var(--ds-accent)',
+              }}
+            >
+              {t.generateNew}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const LABEL = {
+  fontSize: 10.5,
+  letterSpacing: '.1em',
+  textTransform: 'uppercase',
+  color: 'var(--ds-faint)',
+  fontWeight: 700,
+  marginBottom: 7,
+  display: 'block',
+};

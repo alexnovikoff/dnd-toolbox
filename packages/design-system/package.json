@@ -1,0 +1,17 @@
+{
+  "name": "@dnd/design-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared design system (tokens, theme, icons, components) for the D&D Toolbox.",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./tokens.css": "./src/tokens.css"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

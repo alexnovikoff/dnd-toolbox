@@ -1,0 +1,24 @@
+{
+  "name": "@dnd/hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "D&D Toolbox hub — launcher, module shell, and the Anthropic proxy.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@dnd/character-forge": "workspace:*",
+    "@dnd/design-system": "workspace:*",
+    "@dnd/token-creator": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

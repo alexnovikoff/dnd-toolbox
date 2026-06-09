@@ -1,0 +1,6 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+# Verbatim functional graphics — keep byte-faithful to the original tool.
+modules/token-creator/src/frames.js

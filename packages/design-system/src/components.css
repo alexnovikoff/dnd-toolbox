@@ -1,0 +1,142 @@
+/* components.css — shared interaction styles (hover / focus / transitions).
+ *
+ * In the prototype these were injected once via JS; here they live in a real
+ * stylesheet. Per DESIGN_SYSTEM.md §6 we never transition border-color toward
+ * the `transparent` keyword (it can get "stuck"); active borders toggle their
+ * color instantly via inline styles, and only transform/box-shadow/background
+ * (and, where colors are concrete, border-color) are animated.
+ */
+
+.ddtb-clk {
+  cursor: pointer;
+}
+
+/* Cards / tiles */
+.ddtb-tile {
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.ddtb-tile.ddtb-clk:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.34),
+    0 0 0 1px var(--acc, rgba(127, 127, 127, 0.4));
+}
+
+/* Sidebar rows */
+.ddtb-side {
+  transition: background 0.12s ease;
+}
+.ddtb-side.ddtb-clk:hover {
+  background: rgba(127, 110, 80, 0.1);
+}
+
+/* Icon buttons */
+.ddtb-iconbtn {
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.ddtb-iconbtn:hover {
+  background: rgba(127, 110, 80, 0.14);
+}
+
+/* Accent swatches */
+.ddtb-sw {
+  transition: transform 0.1s ease;
+}
+.ddtb-sw:hover {
+  transform: scale(1.12);
+}
+
+/* Buttons */
+.ddtb-btn {
+  transition:
+    filter 0.12s ease,
+    transform 0.1s ease;
+}
+.ddtb-btn:hover {
+  filter: brightness(1.08);
+}
+.ddtb-btn:active {
+  transform: translateY(1px);
+}
+
+/* Token Creator — drop zones, thumbnails, range slider */
+.tc-drop {
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.tc-drop:hover {
+  border-color: var(--acc) !important;
+  color: var(--acc) !important;
+}
+.tc-thumb {
+  transition: transform 0.1s ease;
+}
+.tc-thumb:hover {
+  transform: translateY(-1px);
+}
+.tc-range {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+.tc-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--th);
+  border: 3px solid var(--acc);
+  cursor: pointer;
+  margin-top: 0;
+}
+.tc-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--th);
+  border: 3px solid var(--acc);
+  cursor: pointer;
+}
+
+/* Form placeholders */
+input::placeholder,
+textarea::placeholder {
+  color: var(--ds-faint);
+}
+
+/* Accessibility: visible focus ring on interactive elements */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ds-accent);
+  outline-offset: 2px;
+}
+
+/* Animations */
+@keyframes ddtb-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+@keyframes ddtb-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

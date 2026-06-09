@@ -1,0 +1,5 @@
+node_modules
+dist
+coverage
+# Verbatim functional graphics — kept exactly as the original tool.
+modules/token-creator/src/frames.js
