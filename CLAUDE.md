@@ -61,9 +61,14 @@ Anthropic key is **server-only** (`ANTHROPIC_API_KEY`). The client calls only
 Vite middleware proxy (no `vercel dev` needed). `.env` is gitignored; copy
 `apps/hub/.env.example`.
 
+Smoke-check in dev (no key needed):
+`curl -X POST localhost:5173/api/generate -d '{"mode":"full","name":"x","lang":"en"}'`
+→ `500` "ANTHROPIC_API_KEY is not set" (wiring OK); `GET` → `405`.
+
 ## Gotchas
 
 - Put JSX in `.jsx` files — esbuild parses JSX across linked workspace packages; `.js` won't.
 - `frames.js` is verbatim graphics — don't refactor; it's eslint/prettier-ignored.
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
 - "Don't touch casually" zones: token-creator `frames.js` and character-forge `i18n.js` (10 languages).
+- Desktop-first: the ~680px module column needs viewport ≳1100px beside the 232px sidebar; narrower clips horizontally — widen before responsive/screenshot checks.

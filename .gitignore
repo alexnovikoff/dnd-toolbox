@@ -14,3 +14,6 @@ coverage/
 # logs / os
 *.log
 .DS_Store
+
+# local Claude memory (not shared)
+.claude.local.md
