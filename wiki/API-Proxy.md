@@ -8,10 +8,11 @@ ever calls `/api/generate`.
 
 | File | Role |
 |---|---|
-| `apps/hub/api/_core.js` | Runtime-agnostic core: prompt building, Anthropic call, timeout, rate limit. `handleGenerate({ body, ip }) → { status, json }`. |
+| `apps/hub/api/_core.js` | Runtime-agnostic core: prompt building, Anthropic call, timeout, rate limit, BYOK. `handleGenerate({ body, ip, userKey, freeUsed }) → { status, json, consumedFree }`. |
+| `apps/hub/api/_quota.js` | Free-tier quota: signed `ddtb_quota` cookie (HMAC), `FREE_LIMIT`. |
 | `apps/hub/api/generate.js` | Vercel Serverless Function wrapping the core. |
-| `apps/hub/api/dev-middleware.js` | Vite plugin mounting `/api/generate` in dev/preview using the same core. |
-| `modules/character-forge/src/api.js` | Thin browser client (`fetch('/api/generate', …)`). |
+| `apps/hub/api/_dev-middleware.js` | Vite plugin mounting `/api/generate` in dev/preview using the same core. (Underscore prefix keeps Vercel from deploying it as a function.) |
+| `modules/character-forge/src/api.js` | Thin browser client (`fetch('/api/generate', …)`), user-key storage. |
 
 ## Request contract
 
@@ -28,7 +29,8 @@ The client sends **parameters only** — never a model id, raw messages, or a ke
 ```
 
 Response: `{ "fields": { backstory, personality, goals, flaws, secret_desire } }`
-or `{ "error": "…" }` with an appropriate HTTP status.
+(plus `"remaining": n` on free-tier calls) or `{ "error": "…", "code"?: "…" }`
+with an appropriate HTTP status.
 
 The server constructs the prompt (`langName`, gendered-language note, length
 spec), calls `claude-sonnet-4-6`, and extracts the JSON object from the reply.
@@ -43,6 +45,27 @@ arbitrary models or inject arbitrary content.
 - **Rate limit:** best-effort in-memory sliding window (20 req / 60s / IP) → `429`.
   Serverless instances are short-lived, so for a hard quota use a shared store
   (Vercel KV / Upstash Redis) keyed by IP or user.
+
+## Free tier + BYOK
+
+Each browser gets **`FREE_GENERATIONS`** (default 10) successful generations on
+the server key. The used count travels in a signed, HttpOnly cookie
+(`ddtb_quota`): tamper-proof via HMAC (secret = `QUOTA_SECRET`, defaulting to a
+derivation of the API key), but clearable — this is a *soft* free tier. Only
+successful generations spend quota; errors are free.
+
+After the limit, `/api/generate` returns **`402` + `code: "free_quota_exhausted"`**
+and the UI prompts for the user's own Anthropic key (BYOK):
+
+- The key is stored **only in the user's browser** (`localStorage`,
+  `ddtb_user_key`) and sent per request as the **`x-user-api-key`** header.
+- The server validates the `sk-ant-…` shape, forwards it to Anthropic
+  **in-memory only** — never logged, never persisted — and skips the quota.
+- A bad key maps to **`401` + `code: "invalid_user_key"`** (upstream 401 included).
+- `FREE_GENERATIONS=0` disables the free tier (a user key is always required).
+
+The model and `max_tokens` stay fixed server-side in both modes, so neither the
+free tier nor BYOK can be abused for arbitrary prompts or large outputs.
 
 ## Local development
 
@@ -60,7 +83,8 @@ UI shows an error instead of crashing.
 ## Production (Vercel)
 
 1. Root Directory = `apps/hub` (framework: Vite).
-2. Env var `ANTHROPIC_API_KEY` (Production + Preview).
+2. Env var `ANTHROPIC_API_KEY` (Production + Preview). Optional:
+   `FREE_GENERATIONS`, `QUOTA_SECRET` (see Free tier + BYOK above).
 3. `vercel.json` rewrites everything except `/api/*` to `index.html` (SPA routing).
 
 ## Other platforms

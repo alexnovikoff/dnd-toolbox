@@ -20,7 +20,7 @@ function mockFetchOnce() {
     return {
       ok: true,
       status: 200,
-      json: async () => ({ fields: FIELDS }),
+      json: async () => ({ fields: FIELDS, remaining: 9 }),
     };
   });
   vi.stubGlobal('fetch', fetchMock);
@@ -30,6 +30,7 @@ function mockFetchOnce() {
 describe('character-forge', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    localStorage.clear();
   });
 
   it('exposes a well-formed manifest', () => {
@@ -58,6 +59,65 @@ describe('character-forge', () => {
 
     expect(await screen.findByText(FIELDS.backstory)).toBeInTheDocument();
     expect(screen.getByText(FIELDS.secret_desire)).toBeInTheDocument();
+    expect(screen.getByText('Осталось бесплатных генераций: 9')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the API-key panel when the free quota is exhausted', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 402,
+        json: async () => ({
+          error: 'Free generations used up. Add your own Anthropic API key to continue.',
+          code: 'free_quota_exhausted',
+          remaining: 0,
+        }),
+      }))
+    );
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    fireEvent.change(screen.getByPlaceholderText('Kael Duskmantle'), {
+      target: { value: 'Kael' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+
+    // localized quota message + the key input appear
+    expect(
+      await screen.findByText(/Бесплатные генерации закончились/)
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('sk-ant-…')).toBeInTheDocument();
+  });
+
+  it('stores a user key and sends it as the BYOK header', async () => {
+    const fetchMock = vi.fn(async (url, opts) => {
+      expect(opts.headers['x-user-api-key']).toBe('sk-ant-user-0123456789');
+      return { ok: true, status: 200, json: async () => ({ fields: FIELDS }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+
+    // open the key panel, paste a key, save
+    fireEvent.click(screen.getByRole('button', { name: /API-ключ/ }));
+    fireEvent.change(screen.getByPlaceholderText('sk-ant-…'), {
+      target: { value: 'sk-ant-user-0123456789' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
+    expect(screen.getByText('Используется ваш API-ключ')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Kael Duskmantle'), {
+      target: { value: 'Kael' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(FIELDS.backstory)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

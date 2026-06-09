@@ -61,6 +61,12 @@ Anthropic key is **server-only** (`ANTHROPIC_API_KEY`). The client calls only
 Vite middleware proxy (no `vercel dev` needed). `.env` is gitignored; copy
 `apps/hub/.env.example`.
 
+Free tier + BYOK: each browser gets `FREE_GENERATIONS` (default 10) on the server
+key, counted in a signed cookie (`apps/hub/api/_quota.js`); after that the client
+sends the user's own key via `x-user-api-key` (stored in localStorage
+`ddtb_user_key`, forwarded in-memory only — never log it). Quota exhausted →
+`402 free_quota_exhausted`; bad user key → `401 invalid_user_key`.
+
 Smoke-check in dev (no key needed):
 `curl -X POST localhost:5173/api/generate -d '{"mode":"full","name":"x","lang":"en"}'`
 → `500` "ANTHROPIC_API_KEY is not set" (wiring OK); `GET` → `405`.

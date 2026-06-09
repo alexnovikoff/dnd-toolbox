@@ -10,6 +10,10 @@ frames) — with more slots already laid out in the launcher.
   themes, accents, components). See [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md).
 - **AI proxy:** the Anthropic key lives only on the server (Variant A). The browser
   talks to `/api/generate`; the key is never bundled.
+- **Free tier + BYOK:** each browser gets a few free generations on the server key
+  (default 10, tracked in a signed cookie); after that the user adds their own
+  Anthropic API key, which is stored only in their browser and forwarded per
+  request (never logged or persisted server-side).
 
 > Full documentation lives in the **GitHub Wiki** (source under [`wiki/`](./wiki)).
 
@@ -101,6 +105,9 @@ The proxy defaults to a Vercel Serverless Function at `apps/hub/api/generate.js`
 1. Import the repo in Vercel and set **Root Directory = `apps/hub`** (framework:
    Vite — auto-detected).
 2. Add the environment variable **`ANTHROPIC_API_KEY`** (Production + Preview).
+   Optional: **`FREE_GENERATIONS`** (free generations per browser on the server
+   key; default `10`, `0` = always require a user key) and **`QUOTA_SECRET`**
+   (HMAC secret for the quota cookie; defaults to a derivation of the API key).
 3. Deploy. `apps/hub/vercel.json` adds the SPA rewrite (everything except
    `/api/*` → `index.html`) so client routes like `/tool/token-creator` work.
 

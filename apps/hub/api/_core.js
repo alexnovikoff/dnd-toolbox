@@ -1,7 +1,10 @@
 // _core.js — runtime-agnostic core for the Anthropic proxy (Variant A).
 // Shared by the Vercel function (generate.js) and the Vite dev middleware
-// (dev-middleware.js). The API key is read from process.env only and never
-// leaves the server.
+// (_dev-middleware.js). The server key is read from process.env and never
+// leaves the server. Alternatively the client may send its own key (BYOK,
+// `x-user-api-key`); it is forwarded to Anthropic in-memory only — never
+// logged, never stored.
+import { FREE_LIMIT } from './_quota.js';
 
 const MODEL = 'claude-sonnet-4-6';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -88,20 +91,52 @@ function rateLimited(ip) {
   return recent.length > MAX_REQ;
 }
 
-// Core handler. Returns { status, json }. Never throws.
-export async function handleGenerate({ body = {}, ip = 'unknown' } = {}) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return {
-      status: 500,
-      json: {
-        error:
-          'ANTHROPIC_API_KEY is not set on the server. Add it to the environment (see apps/hub/.env.example) and restart.',
-      },
-    };
-  }
+// Anthropic API keys look like `sk-ant-...`; reject anything else up front so
+// arbitrary header values never reach the upstream call.
+const USER_KEY_RE = /^sk-ant-[A-Za-z0-9_-]{8,250}$/;
+
+// BYOK key from the request header (empty string when absent/malformed type).
+export function readUserKey(req) {
+  const raw = req?.headers?.['x-user-api-key'];
+  return typeof raw === 'string' ? raw.trim() : '';
+}
+
+// Core handler. Returns { status, json, consumedFree }. Never throws.
+// `userKey` (BYOK) bypasses the free quota; otherwise `freeUsed` is checked
+// against FREE_LIMIT and `consumedFree` tells the caller to bump the cookie.
+export async function handleGenerate({ body = {}, ip = 'unknown', userKey = '', freeUsed = 0 } = {}) {
   if (rateLimited(ip)) {
     return { status: 429, json: { error: 'Too many requests. Please wait a moment and try again.' } };
+  }
+
+  let apiKey;
+  const usingUserKey = Boolean(userKey);
+  if (usingUserKey) {
+    if (!USER_KEY_RE.test(userKey)) {
+      return { status: 401, json: { error: 'Invalid API key.', code: 'invalid_user_key' } };
+    }
+    apiKey = userKey;
+  } else {
+    if (FREE_LIMIT > 0 && freeUsed >= FREE_LIMIT) {
+      return {
+        status: 402,
+        json: {
+          error: 'Free generations used up. Add your own Anthropic API key to continue.',
+          code: 'free_quota_exhausted',
+          remaining: 0,
+        },
+      };
+    }
+    apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return {
+        status: 500,
+        json: {
+          error:
+            'ANTHROPIC_API_KEY is not set on the server. Add it to the environment (see apps/hub/.env.example) and restart.',
+        },
+      };
+    }
   }
 
   const mode = body.mode === 'section' ? 'section' : 'full';
@@ -145,6 +180,9 @@ export async function handleGenerate({ body = {}, ip = 'unknown' } = {}) {
   clearTimeout(timer);
 
   if (!upstream.ok) {
+    if (usingUserKey && upstream.status === 401) {
+      return { status: 401, json: { error: 'Invalid API key.', code: 'invalid_user_key' } };
+    }
     return { status: upstream.status, json: { error: `Model API error (${upstream.status}).` } };
   }
 
@@ -165,7 +203,14 @@ export async function handleGenerate({ body = {}, ip = 'unknown' } = {}) {
   } catch {
     return { status: 502, json: { error: 'Could not parse character data.' } };
   }
-  return { status: 200, json: { fields: parsed } };
+  const json = { fields: parsed };
+  let consumedFree = false;
+  if (!usingUserKey && FREE_LIMIT > 0) {
+    // Only successful generations spend quota; errors and timeouts are free.
+    consumedFree = true;
+    json.remaining = Math.max(0, FREE_LIMIT - freeUsed - 1);
+  }
+  return { status: 200, json, consumedFree };
 }
 
 export function getClientIp(req) {

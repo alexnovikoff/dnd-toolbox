@@ -16,7 +16,7 @@ import {
   rand,
   sanitize,
 } from './i18n.js';
-import { generateCharacter, regenerateSection } from './api.js';
+import { generateCharacter, regenerateSection, getUserKey, setUserKey } from './api.js';
 
 function Dice({ onClick, label }) {
   return (
@@ -61,8 +61,43 @@ export default function CharacterForge() {
   const [regenLoading, setRegenLoading] = useState({});
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [userKey, setUserKeyState] = useState(() => getUserKey());
+  const [remaining, setRemaining] = useState(null);
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [keyDraft, setKeyDraft] = useState('');
 
   const t = UI[lang];
+
+  const handleApiError = useCallback(
+    (e) => {
+      if (e?.code === 'free_quota_exhausted') {
+        setRemaining(0);
+        setKeyOpen(true);
+        setError(t.freeLimitText);
+      } else if (e?.code === 'invalid_user_key') {
+        setKeyOpen(true);
+        setError(t.invalidKey);
+      } else {
+        setError(e?.message || 'Something went wrong. Please try again.');
+      }
+    },
+    [t]
+  );
+
+  const saveKey = () => {
+    const k = keyDraft.trim();
+    if (!k) return;
+    setUserKey(k);
+    setUserKeyState(k);
+    setKeyDraft('');
+    setError('');
+  };
+
+  const clearKey = () => {
+    setUserKey('');
+    setUserKeyState('');
+    setKeyDraft('');
+  };
 
   const generate = useCallback(async () => {
     const sName = sanitize(name);
@@ -77,7 +112,7 @@ export default function CharacterForge() {
     setLoading(true);
     setCharacter(null);
     try {
-      const fields = await generateCharacter({
+      const data = await generateCharacter({
         name: sName,
         race: sRace,
         cls: sCls,
@@ -86,26 +121,31 @@ export default function CharacterForge() {
         length,
         lang,
       });
-      setCharacter({ ...fields, name: sName, race: sRace, cls: sCls });
+      setCharacter({ ...data.fields, name: sName, race: sRace, cls: sCls });
+      if (data.remaining != null) setRemaining(data.remaining);
     } catch (e) {
-      setError(e?.message || 'Something went wrong. Please try again.');
+      handleApiError(e);
     }
     setLoading(false);
-  }, [name, race, cls, vibe, lang, gender, length, t]);
+  }, [name, race, cls, vibe, lang, gender, length, t, handleApiError]);
 
   const regenSection = useCallback(
     async (sec) => {
       if (!character) return;
       setRegenLoading((p) => ({ ...p, [sec]: true }));
       try {
-        const fields = await regenerateSection({ section: sec, character, gender, length, lang });
-        setCharacter((p) => ({ ...p, ...fields }));
-      } catch {
-        /* keep previous content on failure */
+        const data = await regenerateSection({ section: sec, character, gender, length, lang });
+        setCharacter((p) => ({ ...p, ...data.fields }));
+        if (data.remaining != null) setRemaining(data.remaining);
+      } catch (e) {
+        if (e?.code === 'free_quota_exhausted' || e?.code === 'invalid_user_key') {
+          handleApiError(e);
+        }
+        /* otherwise keep previous content */
       }
       setRegenLoading((p) => ({ ...p, [sec]: false }));
     },
-    [character, lang, gender, length]
+    [character, lang, gender, length, handleApiError]
   );
 
   const copyAll = useCallback(async () => {
@@ -239,6 +279,76 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
             </Button>
           </div>
           {error && <p style={{ margin: '12px 0 0', color: 'var(--ds-danger)', fontSize: 13 }}>{error}</p>}
+
+          {/* Free tier / own API key */}
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 14,
+              borderTop: '1px solid var(--ds-line2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ fontSize: 12, color: 'var(--ds-faint)' }}>
+              {userKey ? t.usingOwnKey : remaining != null ? t.freeLeft.replace('{n}', remaining) : ''}
+            </span>
+            <button
+              type="button"
+              className="ddtb-btn"
+              onClick={() => setKeyOpen((o) => !o)}
+              style={KEY_TOGGLE}
+            >
+              <Icon name="gear" size={13} /> {t.apiKey}
+            </button>
+          </div>
+          {keyOpen && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 14,
+                borderRadius: 10,
+                background: 'var(--ds-raised)',
+                border: '1px solid var(--ds-line2)',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  type="password"
+                  value={keyDraft}
+                  onChange={(e) => setKeyDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveKey();
+                  }}
+                  placeholder={userKey ? '••••••••••••' : t.keyPlaceholder}
+                  autoComplete="off"
+                  style={KEY_INPUT}
+                />
+                <Button onClick={saveKey} disabled={!keyDraft.trim()} style={{ padding: '9px 16px', fontSize: 13 }}>
+                  {t.save}
+                </Button>
+                {userKey && (
+                  <Button variant="secondary" onClick={clearKey} style={{ padding: '9px 14px', fontSize: 13 }}>
+                    {t.clearKey}
+                  </Button>
+                )}
+              </div>
+              <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--ds-faint)' }}>
+                {t.keyNote}{' '}
+                <a
+                  href="https://console.anthropic.com/settings/keys"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: 'var(--ds-accent)' }}
+                >
+                  {t.getKey}
+                </a>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Loading */}
@@ -379,4 +489,31 @@ const LABEL = {
   fontWeight: 700,
   marginBottom: 7,
   display: 'block',
+};
+
+const KEY_TOGGLE = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '5px 10px',
+  borderRadius: 8,
+  border: '1px solid var(--ds-line2)',
+  background: 'transparent',
+  color: 'var(--ds-muted)',
+  cursor: 'pointer',
+  fontSize: 12,
+  fontFamily: SANS,
+};
+
+const KEY_INPUT = {
+  flex: 1,
+  minWidth: 180,
+  padding: '9px 11px',
+  borderRadius: 8,
+  border: '1px solid var(--ds-line2)',
+  background: 'var(--ds-panel)',
+  color: 'var(--ds-text)',
+  fontSize: 13,
+  fontFamily: SANS,
+  outline: 'none',
 };
