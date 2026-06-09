@@ -11,6 +11,14 @@ coverage/
 .env.local
 .env.*.local
 
+# secrets / ssh keys — never commit
+claudekey
+claudekey.pub
+id_rsa*
+id_ed25519*
+*.pem
+*.key
+
 # logs / os
 *.log
 .DS_Store
