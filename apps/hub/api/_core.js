@@ -29,7 +29,7 @@ const LENGTH_SPEC = {
   normal: '2-3 sentences',
   long: '4-5 sentences',
 };
-const SECTIONS = ['backstory', 'personality', 'goals', 'flaws', 'secret_desire'];
+export const SECTIONS = ['backstory', 'personality', 'goals', 'flaws', 'secret_desire'];
 
 const langName = (code) => LANG_NAMES[code] || 'English';
 const sanitize = (s) =>
@@ -44,7 +44,7 @@ function genderNote(lang, gender) {
     : `\n- Gender: ${g}`;
 }
 
-function buildFull(p) {
+export function buildFull(p) {
   const len = LENGTH_SPEC[p.length] || LENGTH_SPEC.normal;
   return {
     max_tokens: 1000,
@@ -64,7 +64,7 @@ Be vivid, specific, avoid clichés.`,
   };
 }
 
-function buildSection(p) {
+export function buildSection(p) {
   const len = LENGTH_SPEC[p.length] || LENGTH_SPEC.normal;
   const sec = p.section;
   const safeCharacter = JSON.stringify(p.character || {}).slice(0, 4000);
@@ -75,6 +75,18 @@ The field must be ${len} long.
 Character: ${safeCharacter}
 Respond ONLY with JSON: {"${sec}":"new content"}`,
   };
+}
+
+// Pull the first {...} block out of a model reply and parse it.
+// Returns { fields } on success or { error } with the user-facing message.
+export function extractFields(raw) {
+  const match = String(raw || '').match(/\{[\s\S]*\}/);
+  if (!match) return { error: 'Model did not return valid character data.' };
+  try {
+    return { fields: JSON.parse(match[0]) };
+  } catch {
+    return { error: 'Could not parse character data.' };
+  }
 }
 
 // ---- best-effort in-memory rate limit (per IP). ----
@@ -193,17 +205,11 @@ export async function handleGenerate({ body = {}, ip = 'unknown', userKey = '', 
     return { status: 502, json: { error: 'Malformed response from model API.' } };
   }
   const raw = (data.content || []).map((i) => i.text || '').join('');
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) {
-    return { status: 502, json: { error: 'Model did not return valid character data.' } };
+  const extracted = extractFields(raw);
+  if (extracted.error) {
+    return { status: 502, json: { error: extracted.error } };
   }
-  let parsed;
-  try {
-    parsed = JSON.parse(match[0]);
-  } catch {
-    return { status: 502, json: { error: 'Could not parse character data.' } };
-  }
-  const json = { fields: parsed };
+  const json = { fields: extracted.fields };
   let consumedFree = false;
   if (!usingUserKey && FREE_LIMIT > 0) {
     // Only successful generations spend quota; errors and timeouts are free.
