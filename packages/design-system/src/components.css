@@ -13,6 +13,9 @@
 
 /* Cards / tiles */
 .ddtb-tile {
+  /* Must match the wrapped card's border-radius (ToolCard 'feature': 16px),
+   * or the hover ring below draws square corners around the rounded card. */
+  border-radius: 16px;
   transition:
     transform 0.16s ease,
     box-shadow 0.16s ease;
