@@ -2,6 +2,7 @@
 // reusing the exact same handler as the Vercel function. This lets `pnpm dev`
 // (and `vite preview`) work without `vercel dev`.
 import { handleGenerate, getClientIp, readJsonBody, readUserKey } from './_core.js';
+import { handleGenerateLocal } from './_local-claude.js';
 import { readUsedFromCookie, quotaCookie } from './_quota.js';
 
 async function middleware(req, res) {
@@ -12,6 +13,17 @@ async function middleware(req, res) {
     return;
   }
   const body = await readJsonBody(req);
+
+  // LOCAL_CLAUDE=1 (apps/hub/.env): personal local mode — serve via the
+  // developer's Claude Code CLI. No quota cookie, no BYOK, no `remaining`.
+  if (process.env.LOCAL_CLAUDE === '1') {
+    const { status, json } = await handleGenerateLocal({ body });
+    res.statusCode = status;
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify(json));
+    return;
+  }
+
   const freeUsed = readUsedFromCookie(req);
   const { status, json, consumedFree } = await handleGenerate({
     body,

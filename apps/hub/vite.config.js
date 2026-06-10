@@ -9,11 +9,11 @@ const workspaceRoot = path.resolve(here, '../..');
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  // Load every var from .env (not just VITE_-prefixed) and expose the key to the
-  // dev/preview middleware via process.env. It is never injected into the bundle.
+  // Load every var from .env (not just VITE_-prefixed) and expose what the
+  // dev/preview middleware needs via process.env. Never injected into the bundle.
   const env = loadEnv(mode, here, '');
-  if (env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_API_KEY) {
-    process.env.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
+  for (const key of ['ANTHROPIC_API_KEY', 'LOCAL_CLAUDE', 'LOCAL_CLAUDE_MODEL', 'LOCAL_CLAUDE_BIN']) {
+    if (env[key] && !process.env[key]) process.env[key] = env[key];
   }
 
   return {
