@@ -4,7 +4,7 @@ import Component from './TokenCreator.jsx';
 export const manifest = {
   id: 'token-creator',
   name: 'Token Creator',
-  description: 'Токены с рамками для Foundry и стола',
+  description: 'Токены с рамками для Foundry',
   group: 'assets', // creation | assets | locations
   icon: 'token', // name from the shared icon set
   accent: '#3f93a0', // permanent color tag (DESIGN_SYSTEM.md §4)
