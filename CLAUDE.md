@@ -67,6 +67,10 @@ sends the user's own key via `x-user-api-key` (stored in localStorage
 `ddtb_user_key`, forwarded in-memory only — never log it). Quota exhausted →
 `402 free_quota_exhausted`; bad user key → `401 invalid_user_key`.
 
+Local alternative (personal): `LOCAL_CLAUDE=1` in `apps/hub/.env` serves dev
+`/api/generate` via the local Claude Code CLI (subscription auth; quota/BYOK
+skipped; dev middleware only — see `wiki/API-Proxy.md` → "Local mode").
+
 ## Deployment
 
 - Production: **https://dnd-toolbox-hub.vercel.app** (Vercel project
@@ -78,8 +82,8 @@ sends the user's own key via `x-user-api-key` (stored in localStorage
   backstops: free-quota cookie + per-IP rate limit + Anthropic console spend cap.
 - GitHub Wiki sources live in `wiki/`; publish by copying `wiki/*.md` into a clone
   of `dnd-toolbox.wiki.git` and pushing (branch `master`).
-- Planned (handoff brief ready): local Claude Code dev backend —
-  `docs/local-claude-mode-handoff.md`.
+- Local Claude Code dev backend ships behind `LOCAL_CLAUDE=1` (see Secrets / API;
+  design notes in `docs/local-claude-mode-handoff.md`).
 
 Smoke-check in dev (no key needed):
 `curl -X POST localhost:5173/api/generate -d '{"mode":"full","name":"x","lang":"en"}'`

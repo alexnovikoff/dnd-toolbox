@@ -53,6 +53,14 @@ themes (Obsidian / Vellum) with all six accents. Token Creator needs no key;
 Character Forge needs `ANTHROPIC_API_KEY` to generate (it degrades to a clear
 error message without one).
 
+### Local Claude Code mode (optional, personal)
+
+If you have [Claude Code](https://www.anthropic.com/claude-code) installed and
+logged in, dev can run Character Forge on your Claude subscription instead of an
+API key: set `LOCAL_CLAUDE=1` in `apps/hub/.env` (no `ANTHROPIC_API_KEY` needed)
+and restart `pnpm dev`. Personal use only — it lives only in the Vite dev
+middleware and is never deployed. See the [API Proxy](./wiki/API-Proxy.md) wiki page.
+
 ### Scripts (run from the repo root)
 
 | Command | What it does |

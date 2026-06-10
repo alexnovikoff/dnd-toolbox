@@ -80,6 +80,32 @@ pnpm dev
 No `vercel dev` needed. Without a key the endpoint returns a clear `500` and the
 UI shows an error instead of crashing.
 
+## Local mode (Claude Code CLI) — personal
+
+With `LOCAL_CLAUDE=1` in `apps/hub/.env`, the dev middleware serves
+`/api/generate` by spawning the locally installed **Claude Code CLI**
+(`claude -p … --output-format json`) instead of calling the Anthropic API.
+It runs on your Claude subscription — no `ANTHROPIC_API_KEY` needed.
+
+| Var | Default | Meaning |
+|---|---|---|
+| `LOCAL_CLAUDE` | unset | `1` routes **all** dev `/api/generate` traffic through the CLI |
+| `LOCAL_CLAUDE_MODEL` | `sonnet` | Passed to `claude --model` |
+| `LOCAL_CLAUDE_BIN` | `claude` | CLI binary path (for non-PATH installs) |
+
+- Quota and BYOK are skipped entirely (it's the owner's machine): responses are
+  bare `{ fields }` — no `remaining`, no quota cookie — so the UI hides the
+  free counter.
+- Same prompts, validation, and response shapes as the API path (the
+  `_core.js` builders are reused). CLI failures map to `500` (binary missing),
+  `502` (CLI/auth/parse errors), `504` (90s timeout).
+- The CLI is spawned without a shell and with `ANTHROPIC_*` env stripped, so
+  it always authenticates with your `claude` login.
+- **Personal use only.** `_local-claude.js` is imported solely by the dev
+  middleware and must never be deployed or exposed publicly — proxying a
+  Claude subscription to third parties violates Anthropic's usage policy;
+  running Claude Code locally for yourself is the sanctioned path.
+
 ## Production (Vercel)
 
 1. Root Directory = `apps/hub` (framework: Vite).
