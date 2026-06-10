@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dnd-hub",
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": ["pnpm@9.12.3", "-C", "apps/hub", "dev"],
+      "port": 5173,
+      "autoPort": false
+    }
+  ]
+}
