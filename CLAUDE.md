@@ -67,6 +67,20 @@ sends the user's own key via `x-user-api-key` (stored in localStorage
 `ddtb_user_key`, forwarded in-memory only — never log it). Quota exhausted →
 `402 free_quota_exhausted`; bad user key → `401 invalid_user_key`.
 
+## Deployment
+
+- Production: **https://dnd-toolbox-hub.vercel.app** (Vercel project
+  `dnd-toolbox-hub`, team `alex-novikov-s-projects`, Root Directory `apps/hub`,
+  env `ANTHROPIC_API_KEY` set there).
+- **Every push to `main` auto-deploys production.** Run tests/lint/build locally
+  before pushing.
+- Deployment protection is OFF — the site and `/api/generate` are public. Abuse
+  backstops: free-quota cookie + per-IP rate limit + Anthropic console spend cap.
+- GitHub Wiki sources live in `wiki/`; publish by copying `wiki/*.md` into a clone
+  of `dnd-toolbox.wiki.git` and pushing (branch `master`).
+- Planned (handoff brief ready): local Claude Code dev backend —
+  `docs/local-claude-mode-handoff.md`.
+
 Smoke-check in dev (no key needed):
 `curl -X POST localhost:5173/api/generate -d '{"mode":"full","name":"x","lang":"en"}'`
 → `500` "ANTHROPIC_API_KEY is not set" (wiring OK); `GET` → `405`.
