@@ -105,4 +105,40 @@ describe('local Claude Code mode', () => {
     expect(r.json.error).toBe('Invalid section.');
     expect(runner).not.toHaveBeenCalled();
   });
+
+  it('serves tavern_enliven as plain text wrapped in { text }', async () => {
+    let seen;
+    const r = await handleGenerateLocal({
+      body: {
+        mode: 'tavern_enliven',
+        facts: 'Название: «Пьяный Кабан»\nТон: Уютная',
+        lang: 'ru',
+      },
+      runClaude: async (prompt) => {
+        seen = prompt;
+        return {
+          stdout: envelope({ result: ' Тёплый свет стелется по дубовым столам. ' }),
+          stderr: '',
+          code: 0,
+        };
+      },
+    });
+    expect(r.status).toBe(200);
+    expect(r.json).toEqual({ text: 'Тёплый свет стелется по дубовым столам.' });
+    // the server-built prompt carries the facts and the handoff template
+    expect(seen).toContain('Ты помогаешь мастеру D&D');
+    expect(seen).toContain('Пьяный Кабан');
+    expect(seen).toContain('2–3 предложения');
+  });
+
+  it('rejects tavern_enliven without facts with 400 before running the CLI', async () => {
+    const runner = vi.fn();
+    const r = await handleGenerateLocal({
+      body: { mode: 'tavern_enliven', lang: 'ru' },
+      runClaude: runner,
+    });
+    expect(r.status).toBe(400);
+    expect(r.json.error).toBe('Invalid request.');
+    expect(runner).not.toHaveBeenCalled();
+  });
 });

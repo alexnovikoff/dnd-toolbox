@@ -113,6 +113,26 @@ export const ICON_PATHS = {
   check: <path d="m5 12.5 4.4 4.5L19 7" />,
   back: <path d="m15 6-6 6 6 6" />,
   droplet: <path d="M12 3.2s6 6.2 6 10.2a6 6 0 0 1-12 0c0-4 6-10.2 6-10.2Z" />,
+  lock: (
+    <g>
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+    </g>
+  ),
+  lockOpen: (
+    <g>
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2" />
+      <path d="M8 10.5V7a4 4 0 0 1 7.8-1.2" />
+    </g>
+  ),
+  reroll: (
+    <g>
+      <path d="M4.5 12a7.5 7.5 0 0 1 12.8-5.3L19.5 9" />
+      <path d="M19.5 4.5V9H15" />
+      <path d="M19.5 12a7.5 7.5 0 0 1-12.8 5.3L4.5 15" />
+      <path d="M4.5 19.5V15H9" />
+    </g>
+  ),
 };
 
 export function Icon({ name, size = 22, stroke = 1.6, className = '', style = {} }) {

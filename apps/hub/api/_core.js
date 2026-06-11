@@ -77,6 +77,33 @@ Respond ONLY with JSON: {"${sec}":"new content"}`,
   };
 }
 
+// Multi-line tavern facts from the client: strip injection-prone characters
+// per line but keep the line structure the prompt template expects.
+function sanitizeFacts(s) {
+  return String(s || '')
+    .replace(/[\\"`]/g, ' ')
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 12)
+    .join('\n')
+    .slice(0, 1500);
+}
+
+// «Оживить описание» (Tavern Builder) — 2–3 sentences of read-aloud text.
+// Prompt text is verbatim from the design handoff
+// (design_handoff_tavern_builder/design-reference/tavern-module.jsx, enliven()).
+export function buildTavernEnliven(p) {
+  const facts = sanitizeFacts(p.facts);
+  return {
+    max_tokens: 300,
+    content:
+      p.lang === 'ru'
+        ? `Ты помогаешь мастеру D&D. Факты о таверне:\n${facts}\n\nНапиши 2–3 предложения атмосферного описания этой таверны для зачитывания игрокам вслух, когда они впервые входят. Художественно, но без пафоса. Не используй заголовки, списки, кавычки и название таверны дословно. Ответь только текстом описания на русском.`
+        : `You are helping a D&D game master. Tavern facts:\n${facts}\n\nWrite 2–3 sentences of atmospheric read-aloud description for when the players first walk in. Evocative but not purple. No headings, lists, quotes, and do not repeat the tavern name verbatim. Reply with the description text only, in English.`,
+  };
+}
+
 // Pull the first {...} block out of a model reply and parse it.
 // Returns { fields } on success or { error } with the user-facing message.
 export function extractFields(raw) {
@@ -116,9 +143,17 @@ export function readUserKey(req) {
 // Core handler. Returns { status, json, consumedFree }. Never throws.
 // `userKey` (BYOK) bypasses the free quota; otherwise `freeUsed` is checked
 // against FREE_LIMIT and `consumedFree` tells the caller to bump the cookie.
-export async function handleGenerate({ body = {}, ip = 'unknown', userKey = '', freeUsed = 0 } = {}) {
+export async function handleGenerate({
+  body = {},
+  ip = 'unknown',
+  userKey = '',
+  freeUsed = 0,
+} = {}) {
   if (rateLimited(ip)) {
-    return { status: 429, json: { error: 'Too many requests. Please wait a moment and try again.' } };
+    return {
+      status: 429,
+      json: { error: 'Too many requests. Please wait a moment and try again.' },
+    };
   }
 
   let apiKey;
@@ -151,12 +186,20 @@ export async function handleGenerate({ body = {}, ip = 'unknown', userKey = '', 
     }
   }
 
-  const mode = body.mode === 'section' ? 'section' : 'full';
+  const mode = ['section', 'tavern_enliven'].includes(body.mode) ? body.mode : 'full';
   if (mode === 'section' && !SECTIONS.includes(body.section)) {
     return { status: 400, json: { error: 'Invalid section.' } };
   }
+  if (mode === 'tavern_enliven' && !String(body.facts || '').trim()) {
+    return { status: 400, json: { error: 'Invalid request.' } };
+  }
 
-  const spec = mode === 'section' ? buildSection(body) : buildFull(body);
+  const spec =
+    mode === 'section'
+      ? buildSection(body)
+      : mode === 'tavern_enliven'
+        ? buildTavernEnliven(body)
+        : buildFull(body);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -205,11 +248,21 @@ export async function handleGenerate({ body = {}, ip = 'unknown', userKey = '', 
     return { status: 502, json: { error: 'Malformed response from model API.' } };
   }
   const raw = (data.content || []).map((i) => i.text || '').join('');
-  const extracted = extractFields(raw);
-  if (extracted.error) {
-    return { status: 502, json: { error: extracted.error } };
+  let json;
+  if (mode === 'tavern_enliven') {
+    // plain prose, not JSON — the whole reply is the description
+    const text = raw.trim();
+    if (!text) {
+      return { status: 502, json: { error: 'Model returned an empty description.' } };
+    }
+    json = { text };
+  } else {
+    const extracted = extractFields(raw);
+    if (extracted.error) {
+      return { status: 502, json: { error: extracted.error } };
+    }
+    json = { fields: extracted.fields };
   }
-  const json = { fields: extracted.fields };
   let consumedFree = false;
   if (!usingUserKey && FREE_LIMIT > 0) {
     // Only successful generations spend quota; errors and timeouts are free.

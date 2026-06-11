@@ -5,8 +5,9 @@
 // themselves from these manifests; nothing else needs editing.
 import * as characterForge from '@dnd/character-forge';
 import * as tokenCreator from '@dnd/token-creator';
+import * as tavernBuilder from '@dnd/tavern-builder';
 
-export const MODULES = [characterForge, tokenCreator];
+export const MODULES = [characterForge, tokenCreator, tavernBuilder];
 
 export const manifests = MODULES.map((m) => m.manifest);
 

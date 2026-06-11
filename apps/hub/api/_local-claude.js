@@ -3,7 +3,7 @@
 // developer's own subscription. Personal use only. Imported exclusively by
 // _dev-middleware.js — never by generate.js — so it cannot reach production.
 import { spawn } from 'node:child_process';
-import { buildFull, buildSection, extractFields, SECTIONS } from './_core.js';
+import { buildFull, buildSection, buildTavernEnliven, extractFields, SECTIONS } from './_core.js';
 
 const TIMEOUT_MS = 90_000;
 
@@ -65,11 +65,19 @@ function defaultRunClaude(prompt) {
 // Local-mode handler: same validation and response shapes as handleGenerate,
 // but no quota/BYOK and no `remaining` field (it's the owner's machine).
 export async function handleGenerateLocal({ body = {}, runClaude = defaultRunClaude } = {}) {
-  const mode = body.mode === 'section' ? 'section' : 'full';
+  const mode = ['section', 'tavern_enliven'].includes(body.mode) ? body.mode : 'full';
   if (mode === 'section' && !SECTIONS.includes(body.section)) {
     return { status: 400, json: { error: 'Invalid section.' } };
   }
-  const spec = mode === 'section' ? buildSection(body) : buildFull(body);
+  if (mode === 'tavern_enliven' && !String(body.facts || '').trim()) {
+    return { status: 400, json: { error: 'Invalid request.' } };
+  }
+  const spec =
+    mode === 'section'
+      ? buildSection(body)
+      : mode === 'tavern_enliven'
+        ? buildTavernEnliven(body)
+        : buildFull(body);
 
   let run;
   try {
@@ -113,6 +121,14 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
     return { status: 502, json: { error: `claude CLI error: ${detail}` } };
   }
 
+  if (mode === 'tavern_enliven') {
+    // plain prose, not JSON — the whole reply is the description
+    const text = String(envelope.result || '').trim();
+    if (!text) {
+      return { status: 502, json: { error: 'Model returned an empty description.' } };
+    }
+    return { status: 200, json: { text } };
+  }
   const extracted = extractFields(envelope.result);
   if (extracted.error) {
     return { status: 502, json: { error: extracted.error } };

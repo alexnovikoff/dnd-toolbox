@@ -1,0 +1,18 @@
+{
+  "name": "@dnd/tavern-builder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tavern Builder — bilingual tavern generator with block locks and a Claude-powered read-aloud description.",
+  "main": "src/index.jsx",
+  "exports": {
+    ".": "./src/index.jsx"
+  },
+  "dependencies": {
+    "@dnd/design-system": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

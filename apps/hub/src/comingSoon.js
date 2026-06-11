@@ -21,15 +21,6 @@ export const COMING_SOON = [
     status: 'soon',
   },
   {
-    id: 'tavern',
-    name: 'Tavern Builder',
-    description: 'Заведения, меню, завсегдатаи и слухи',
-    group: 'locations',
-    icon: 'tavern',
-    accent: '#b07a3f',
-    status: 'soon',
-  },
-  {
     id: 'city',
     name: 'City Forge',
     description: 'Города, районы и враждующие фракции',

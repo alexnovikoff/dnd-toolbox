@@ -12,6 +12,7 @@
   "dependencies": {
     "@dnd/character-forge": "workspace:*",
     "@dnd/design-system": "workspace:*",
+    "@dnd/tavern-builder": "workspace:*",
     "@dnd/token-creator": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

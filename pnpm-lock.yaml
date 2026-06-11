@@ -50,6 +50,9 @@ importers:
       '@dnd/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@dnd/tavern-builder':
+        specifier: workspace:*
+        version: link:../../modules/tavern-builder
       '@dnd/token-creator':
         specifier: workspace:*
         version: link:../../modules/token-creator
@@ -71,6 +74,18 @@ importers:
         version: 5.4.21
 
   modules/character-forge:
+    dependencies:
+      '@dnd/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+
+  modules/tavern-builder:
     dependencies:
       '@dnd/design-system':
         specifier: workspace:*
