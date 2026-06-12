@@ -3,3 +3,5 @@ dist
 coverage
 # Verbatim functional graphics — kept exactly as the original tool.
 modules/token-creator/src/frames.js
+# Local-only reference sources (gitignored) — not part of the workspace.
+reference_sources/

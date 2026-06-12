@@ -23,6 +23,8 @@ Workspaces: `apps/*`, `packages/*`, `modules/*` (`pnpm-workspace.yaml`).
 - `apps/hub` (`@dnd/hub`) — host: launcher, module shell, routing, server proxy.
 - `packages/design-system` (`@dnd/design-system`) — the **only** source of style.
 - `modules/*` — tools: `token-creator`, `character-forge`, `tavern-builder`.
+- `reference_sources/` — local-only originals (standalone apps + design handoffs)
+  the modules were ported from; gitignored, never on GitHub.
 
 Dependency direction is one-way: **hub + modules → design-system**, never reverse.
 Modules never import each other; the hub composes them via the registry.

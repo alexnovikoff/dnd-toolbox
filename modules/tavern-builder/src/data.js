@@ -1,7 +1,7 @@
 // data.js — bilingual (ru/en) content tables for the Tavern Builder.
 // Every entry carries both languages so the language toggle is instant —
 // no rerolling needed. The original handoff entries
-// (design_handoff_tavern_builder/design-reference/tavern-data.js) are
+// (reference_sources/design_handoff_tavern_builder/design-reference/tavern-data.js) are
 // preserved byte-for-byte; later curated additions extend the pools and add
 // grammar fields for the name templates. Hand-formatted (.prettierignore).
 // adjective: ru = [masc, fem, neut] forms.
