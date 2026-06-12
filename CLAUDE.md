@@ -109,6 +109,8 @@ Smoke-check in dev (no key needed):
   `g`/`ru24`/`enPl`, name `gen`) — `data.test.js` guards the shape. Both files stay
   prettier-ignored (hand-formatted); don't reformat.
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
-- "Don't touch casually" zones: `frames.js` and character-forge `i18n.js` (10 languages).
+- "Don't touch casually" zones: `frames.js` and character-forge `i18n.js` (10-language UI
+  one-liners + ru/en roll tables; `i18n.test.js` guards the shape; prettier-ignored — keep
+  the hand formatting).
 - Desktop-first: the ~680px module column needs viewport ≳1100px beside the 232px sidebar; narrower clips horizontally — widen before responsive/screenshot checks.
 - **Never `git add -A` / `git add .`** — stage explicit paths (`git add <file>`). A stray SSH key once got swept into a commit this way; keys/secrets are gitignored but don't rely on it.

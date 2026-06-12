@@ -7,5 +7,7 @@ modules/token-creator/src/frames.js
 # Verbatim content tables + generation logic from the tavern design handoff.
 modules/tavern-builder/src/data.js
 modules/tavern-builder/src/engine.js
+# Hand-formatted i18n tables — one long line per language, preserved verbatim.
+modules/character-forge/src/i18n.js
 # Local-only reference sources (gitignored) — keep originals byte-faithful.
 reference_sources/
