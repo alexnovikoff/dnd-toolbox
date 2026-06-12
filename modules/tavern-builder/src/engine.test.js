@@ -46,6 +46,81 @@ describe('tavern engine', () => {
     );
   });
 
+  it('falls back to adj_noun for taverns saved before name templates', () => {
+    // shape of a pre-template localStorage tavern: no nameKind at all
+    const legacy = {
+      identity: {
+        adj: { ru: ['Пьяный', 'Пьяная', 'Пьяное'], en: 'Drunken' },
+        noun: { ru: 'Грифон', g: 0, en: 'Griffin' },
+      },
+    };
+    expect(tavernName(legacy, 'ru')).toBe('Пьяный Грифон');
+    expect(tavernName(legacy, 'en')).toBe('The Drunken Griffin');
+  });
+
+  it('renders the owner template in both locales', () => {
+    const t = {
+      identity: {
+        adj: { ru: ['Пьяный', 'Пьяная', 'Пьяное'], en: 'Drunken' },
+        noun: { ru: 'Кабан', g: 0, en: 'Boar' },
+        nameKind: 'owner',
+        ownerName: { ru: 'Барлен', gen: 'Барлена', en: 'Barlen' },
+      },
+    };
+    expect(tavernName(t, 'ru')).toBe('У Барлена');
+    expect(tavernName(t, 'en')).toBe('Barlen’s');
+  });
+
+  it('renders the two-nouns template in both locales', () => {
+    const t = {
+      identity: {
+        adj: { ru: ['Пьяный', 'Пьяная', 'Пьяное'], en: 'Drunken' },
+        noun: { ru: 'Котёл', g: 0, en: 'Cauldron' },
+        nameKind: 'two_nouns',
+        noun2: { ru: 'Корона', g: 1, en: 'Crown' },
+      },
+    };
+    expect(tavernName(t, 'ru')).toBe('Котёл и Корона');
+    expect(tavernName(t, 'en')).toBe('The Cauldron & Crown');
+  });
+
+  it('agrees the numeral with the noun gender and uses plural forms', () => {
+    const make = (num, noun) => ({
+      identity: {
+        adj: { ru: ['Пьяный', 'Пьяная', 'Пьяное'], en: 'Drunken' },
+        noun,
+        nameKind: 'numeral',
+        num,
+      },
+    });
+    const rose = { ru: 'Роза', g: 1, ru24: 'Розы', en: 'Rose', enPl: 'Roses' };
+    const stag = { ru: 'Олень', g: 0, ru24: 'Оленя', en: 'Stag', enPl: 'Stags' };
+    const bucket = { ru: 'Ведро', g: 2, ru24: 'Ведра', en: 'Bucket', enPl: 'Buckets' };
+    expect(tavernName(make(2, rose), 'ru')).toBe('Две Розы');
+    expect(tavernName(make(2, stag), 'ru')).toBe('Два Оленя');
+    expect(tavernName(make(2, bucket), 'ru')).toBe('Два Ведра');
+    expect(tavernName(make(3, rose), 'ru')).toBe('Три Розы');
+    expect(tavernName(make(4, stag), 'ru')).toBe('Четыре Оленя');
+    expect(tavernName(make(3, rose), 'en')).toBe('The Three Roses');
+  });
+
+  it('always produces a valid name kind and a non-empty name', () => {
+    const kinds = new Set();
+    for (let i = 0; i < 200; i++) {
+      const t = generate(PARAMS);
+      const id = t.identity;
+      kinds.add(id.nameKind);
+      expect(['adj_noun', 'owner', 'two_nouns', 'numeral']).toContain(id.nameKind);
+      if (id.nameKind === 'two_nouns') expect(id.noun2).not.toBe(id.noun);
+      if (id.nameKind === 'owner') expect(id.ownerName.gen).toBeTruthy();
+      if (id.nameKind === 'numeral') expect([2, 3, 4]).toContain(id.num);
+      expect(tavernName(t, 'ru').length).toBeGreaterThan(0);
+      expect(tavernName(t, 'en').length).toBeGreaterThan(0);
+    }
+    // 200 draws at 15% per minor kind: all four kinds virtually always appear
+    expect(kinds.size).toBe(4);
+  });
+
   it('scales patrons with settlement size: 2 + size', () => {
     expect(generate({ ...PARAMS, size: 0 }).patrons).toHaveLength(2);
     expect(generate({ ...PARAMS, size: 1 }).patrons).toHaveLength(3);

@@ -100,10 +100,13 @@ Smoke-check in dev (no key needed):
 ## Gotchas
 
 - Put JSX in `.jsx` files — esbuild parses JSX across linked workspace packages; `.js` won't.
-- Verbatim ports stay byte-faithful and prettier-ignored — don't refactor or reformat:
-  token-creator `frames.js` (graphics), tavern-builder `data.js`/`engine.js`
-  (curated bilingual tables + generation logic from the design handoff).
+- token-creator `frames.js` is a verbatim port — byte-faithful, prettier-ignored, don't refactor.
+- tavern-builder `data.js`/`engine.js`: the handoff originals are preserved, but the tables
+  are extended with curated entries and the engine grew name templates. Extending is fine;
+  every entry needs both locales and correct RU grammar (adjective gender forms, noun
+  `g`/`ru24`/`enPl`, name `gen`) — `data.test.js` guards the shape. Both files stay
+  prettier-ignored (hand-formatted); don't reformat.
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
-- "Don't touch casually" zones: the verbatim ports above and character-forge `i18n.js` (10 languages).
+- "Don't touch casually" zones: `frames.js` and character-forge `i18n.js` (10 languages).
 - Desktop-first: the ~680px module column needs viewport ≳1100px beside the 232px sidebar; narrower clips horizontally — widen before responsive/screenshot checks.
 - **Never `git add -A` / `git add .`** — stage explicit paths (`git add <file>`). A stray SSH key once got swept into a commit this way; keys/secrets are gitignored but don't rely on it.

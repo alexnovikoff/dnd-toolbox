@@ -41,8 +41,16 @@ A bilingual tavern generator for the GM (tag `#b07a3f`, icon `tavern`, group
 «Кабинет мастера»).
 
 - **Table-driven, no AI for generation:** `src/data.js` (curated RU/EN content
-  tables) + `src/engine.js` (pure generation logic) are **verbatim** ports from
-  the handoff — in `.prettierignore`, do not edit the texts or the algorithm.
+  tables) + `src/engine.js` (pure generation logic). The handoff originals are
+  preserved; the pools were later extended with curated bilingual entries
+  (30 adjectives × 34 nouns, 30 rumors/patrons, 20 traits/quirks/secrets …) —
+  `data.test.js` guards the table shape. Both files are hand-formatted
+  (`.prettierignore`).
+- **Four name templates:** «Прилагательное + Существительное» («Пьяный
+  Грифон»), «У Барлена» (owner genitive / _Barlen’s_), «Котёл и Корона»
+  (_The Cauldron & Crown_) and «Три Кружки» (_The Three Tankards_, numeral
+  agrees with RU gender). Taverns saved before templates render via the
+  adj+noun fallback.
 - **Five blocks** — identity (name + sign + atmosphere), menu (kitchen/cellar
   with prices by wealth tier), owner & staff (with a DM secret), patrons
   (2 + settlement size), rumors (with true/partly/false chips `#4fb487` /
