@@ -13,6 +13,7 @@ ever calls `/api/generate`.
 | `apps/hub/api/generate.js` | Vercel Serverless Function wrapping the core. |
 | `apps/hub/api/_dev-middleware.js` | Vite plugin mounting `/api/generate` in dev/preview using the same core. (Underscore prefix keeps Vercel from deploying it as a function.) |
 | `modules/character-forge/src/api.js` | Thin browser client (`fetch('/api/generate', …)`), user-key storage. |
+| `modules/tavern-builder/src/api.js` | Same pattern for the tavern "enliven" call (shares the stored user key). |
 
 ## Request contract
 
@@ -26,11 +27,17 @@ The client sends **parameters only** — never a model id, raw messages, or a ke
 // regenerate one section
 { "mode": "section", "section": "backstory",
   "character": { ... }, "gender": "male", "length": "normal", "lang": "ru" }
+
+// tavern read-aloud description (Tavern Builder «Оживить описание»)
+{ "mode": "tavern_enliven", "lang": "ru",
+  "facts": "Название: «Пьяный Грифон»\nТон: Уютная\n…" }
 ```
 
-Response: `{ "fields": { backstory, personality, goals, flaws, secret_desire } }`
-(plus `"remaining": n` on free-tier calls) or `{ "error": "…", "code"?: "…" }`
-with an appropriate HTTP status.
+Response for `full`/`section`:
+`{ "fields": { backstory, personality, goals, flaws, secret_desire } }`;
+for `tavern_enliven`: `{ "text": "…" }` (2–3 sentences of plain prose). Both
+add `"remaining": n` on free-tier calls; errors are `{ "error": "…", "code"?: "…" }`
+with an appropriate HTTP status. All modes share one free-tier quota pool.
 
 The server constructs the prompt (`langName`, gendered-language note, length
 spec), calls `claude-sonnet-4-6`, and extracts the JSON object from the reply.

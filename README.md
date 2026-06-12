@@ -1,9 +1,11 @@
 # D&D Toolbox
 
 A hub of tools for D&D Game Masters, built as a **monorepo** with a shared design
-system and pluggable modules. Two tools ship today — **Character Forge** (AI
-character generator) and **Token Creator** (circular tokens with procedural
-frames) — with more slots already laid out in the launcher.
+system and pluggable modules. Three tools ship today — **Character Forge** (AI
+character generator), **Token Creator** (circular tokens with procedural frames)
+and **Tavern Builder** (bilingual tavern generator with block locks and an
+AI-written read-aloud description) — with more slots already laid out in the
+launcher.
 
 - **Stack:** pnpm workspaces · Vite + React 18 · JavaScript (JSX) · `react-router`
 - **Design system:** `@dnd/design-system` — the single source of styling (tokens,
@@ -29,6 +31,7 @@ dnd-toolbox/
 ├─ packages/design-system/   # @dnd/design-system — tokens, theme, icons, components
 └─ modules/
    ├─ character-forge/       # @dnd/character-forge
+   ├─ tavern-builder/        # @dnd/tavern-builder
    └─ token-creator/         # @dnd/token-creator
 ```
 
@@ -48,16 +51,18 @@ cp apps/hub/.env.example apps/hub/.env
 pnpm dev          # → http://localhost:5173
 ```
 
-`pnpm dev` runs the hub. Both modules open from the launcher and work in both
-themes (Obsidian / Vellum) with all six accents. Token Creator needs no key;
-Character Forge needs `ANTHROPIC_API_KEY` to generate (it degrades to a clear
-error message without one).
+`pnpm dev` runs the hub. All modules open from the launcher and work in both
+themes (Obsidian / Vellum) with all six accents. Token Creator and Tavern
+Builder need no key (tavern generation is table-driven and local); Character
+Forge — and Tavern Builder's optional "bring it to life" description — need
+`ANTHROPIC_API_KEY` (they degrade to a clear error message without one).
 
 ### Local Claude Code mode (optional, personal)
 
 If you have [Claude Code](https://www.anthropic.com/claude-code) installed and
-logged in, dev can run Character Forge on your Claude subscription instead of an
-API key: set `LOCAL_CLAUDE=1` in `apps/hub/.env` (no `ANTHROPIC_API_KEY` needed)
+logged in, dev can run the AI features (Character Forge, Tavern Builder's
+description) on your Claude subscription instead of an API key: set
+`LOCAL_CLAUDE=1` in `apps/hub/.env` (no `ANTHROPIC_API_KEY` needed)
 and restart `pnpm dev`. Personal use only — it lives only in the Vite dev
 middleware and is never deployed. See the [API Proxy](./wiki/API-Proxy.md) wiki page.
 

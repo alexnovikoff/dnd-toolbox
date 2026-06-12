@@ -131,7 +131,7 @@ Public Sans: 400,500,600,700 + italic 400
 
 Линейные, viewBox `0 0 24 24`, `fill:none`, `stroke:currentColor`, `stroke-width:1.6`, скруглённые концы/стыки. Набор и пути — `design-reference/icons.jsx`.
 
-Доступны: `character, token, npc, loot, tavern, city, dice` (инструменты); `gear, search, plus, grid, chevron, wand, book, pin, bolt, sun, moon, check, back, droplet` (UI). Новые модули добавляют свою иконку в общий набор.
+Доступны: `character, token, npc, loot, tavern, city, dice` (инструменты); `gear, search, plus, grid, chevron, wand, book, pin, bolt, sun, moon, check, back, droplet, lock, lockOpen, reroll` (UI). Новые модули добавляют свою иконку в общий набор.
 
 ---
 
@@ -146,6 +146,11 @@ Public Sans: 400,500,600,700 + italic 400
 - **`StatusTag`** — «Готов» (акцентный) / «Скоро» (приглушённый).
 - **`AppShell`** — каркас модуля: сайдбар (сгруппированная навигация) + верхняя строка (хлебные крошки + действия) + рабочая область.
 - **`AppearanceControls`** — переключатель темы (☾/☀) + поповер выбора акцента.
+- **`ToggleGroup`** — одиночный выбор, два варианта: `buttons` (по умолчанию —
+  отдельные кнопки с бордером, как пол/длина в Character Forge) и `segment`
+  (компактный сегмент-контрол в общем боксе: контейнер `raised` + `line2`,
+  радиус 9, паддинг 3; активная кнопка — `glow` + `accent` + inset-кольцо
+  `line`; как достаток/поселение/язык в Tavern Builder).
 - **Формы:** `Field`, `Select`, `Slider` — единый вид полей (лейбл 10.5px, поле на `raised`, бордер `line2`, радиус 8–9).
 
 Эталонные реализации — `design-reference/parts.jsx` и `screens.jsx`.

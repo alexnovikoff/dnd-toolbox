@@ -38,7 +38,7 @@ export { Component };  // default React component for the tool body
 
 - **`registry.js`** imports each module namespace and exposes `MODULES`,
   `manifests`, and `getModule(id)`. This is the *only* place a module is wired in.
-- **`comingSoon.js`** holds placeholder manifests (NPC/Loot/Tavern/City) so the
+- **`comingSoon.js`** holds placeholder manifests (NPC/Loot/City) so the
   launcher shows the full set; remove a placeholder when its real module ships.
 - **`Launcher.jsx`** = the home grid: hero, "Готовы к работе" (ready modules,
   `feature` cards), "Скоро в наборе" (`tile` cards), top bar with search +

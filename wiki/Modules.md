@@ -34,8 +34,33 @@ Circular character tokens with procedural frames for Foundry VTT and the table
 - **Styling:** UI chrome uses the design system; the `<canvas>` reads raw colors
   from `useTheme().palette` (canvas can't consume CSS variables).
 
+## Tavern Builder (`@dnd/tavern-builder`)
+
+A bilingual tavern generator for the GM (tag `#b07a3f`, icon `tavern`, group
+`locations`), built from the `design_handoff_tavern_builder/` package (layout A
+«Кабинет мастера»).
+
+- **Table-driven, no AI for generation:** `src/data.js` (curated RU/EN content
+  tables) + `src/engine.js` (pure generation logic) are **verbatim** ports from
+  the handoff — in `.prettierignore`, do not edit the texts or the algorithm.
+- **Five blocks** — identity (name + sign + atmosphere), menu (kitchen/cellar
+  with prices by wealth tier), owner & staff (with a DM secret), patrons
+  (2 + settlement size), rumors (with true/partly/false chips `#4fb487` /
+  `#c9a84c` / `#d06a52` — functional graphics, like token frames).
+- **Locks + rerolls:** each block can be locked (🔒 survives "Generate" and
+  parameter changes); per-block reroll regenerates only that block.
+- **Instant language switch:** every table entry carries both locales, so
+  РУС/ENG never rerolls; UI chrome stays Russian. RU tavern names agree
+  adjective gender with the noun («Пьяная Кружка», but «Пьяный Грифон»).
+- **AI only for "Оживить описание":** 2–3 sentences of read-aloud text via the
+  server proxy (`mode: "tavern_enliven"` → `{ text }`); the result is stored
+  with its language and reset when the identity block rerolls. Quota/BYOK rules
+  are the same as Character Forge. See [[API Proxy|API-Proxy]].
+- **State** (`params`, `lang`, `locks`, `tavern`) persists in localStorage under
+  `ddtb_tavern`.
+
 ## Coming soon
 
 Placeholders in `apps/hub/src/comingSoon.js` (NPC Generator, Loot Generator,
-Tavern Builder, City Forge) render on the launcher and sidebar. Build one by
-following [[Adding a Module|Adding-a-Module]] and removing its placeholder.
+City Forge) render on the launcher and sidebar. Build one by following
+[[Adding a Module|Adding-a-Module]] and removing its placeholder.

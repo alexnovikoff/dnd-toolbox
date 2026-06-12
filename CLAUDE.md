@@ -22,7 +22,7 @@ Workspaces: `apps/*`, `packages/*`, `modules/*` (`pnpm-workspace.yaml`).
 
 - `apps/hub` (`@dnd/hub`) — host: launcher, module shell, routing, server proxy.
 - `packages/design-system` (`@dnd/design-system`) — the **only** source of style.
-- `modules/*` — tools: `token-creator`, `character-forge`.
+- `modules/*` — tools: `token-creator`, `character-forge`, `tavern-builder`.
 
 Dependency direction is one-way: **hub + modules → design-system**, never reverse.
 Modules never import each other; the hub composes them via the registry.
@@ -67,6 +67,10 @@ sends the user's own key via `x-user-api-key` (stored in localStorage
 `ddtb_user_key`, forwarded in-memory only — never log it). Quota exhausted →
 `402 free_quota_exhausted`; bad user key → `401 invalid_user_key`.
 
+`/api/generate` modes (`_core.js` builds all prompts server-side): `full` /
+`section` → `{ fields }` (Character Forge); `tavern_enliven` (`{ facts, lang }`)
+→ `{ text }` (Tavern Builder read-aloud description). One quota pool for all.
+
 Local alternative (personal): `LOCAL_CLAUDE=1` in `apps/hub/.env` serves dev
 `/api/generate` via the local Claude Code CLI (subscription auth; quota/BYOK
 skipped; dev middleware only — see `wiki/API-Proxy.md` → "Local mode").
@@ -78,6 +82,10 @@ skipped; dev middleware only — see `wiki/API-Proxy.md` → "Local mode").
   env `ANTHROPIC_API_KEY` set there).
 - **Every push to `main` auto-deploys production.** Run tests/lint/build locally
   before pushing.
+- **No direct pushes to `main` — all changes go through a pull request:**
+  feature branch → push → PR → merge via GitHub only after CI is green
+  (rule set 2026-06-12). Since merging `main` = deploying prod, the PR is the
+  deploy gate.
 - Deployment protection is OFF — the site and `/api/generate` are public. Abuse
   backstops: free-quota cookie + per-IP rate limit + Anthropic console spend cap.
 - GitHub Wiki sources live in `wiki/`; publish by copying `wiki/*.md` into a clone
@@ -92,8 +100,10 @@ Smoke-check in dev (no key needed):
 ## Gotchas
 
 - Put JSX in `.jsx` files — esbuild parses JSX across linked workspace packages; `.js` won't.
-- `frames.js` is verbatim graphics — don't refactor; it's eslint/prettier-ignored.
+- Verbatim ports stay byte-faithful and prettier-ignored — don't refactor or reformat:
+  token-creator `frames.js` (graphics), tavern-builder `data.js`/`engine.js`
+  (curated bilingual tables + generation logic from the design handoff).
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
-- "Don't touch casually" zones: token-creator `frames.js` and character-forge `i18n.js` (10 languages).
+- "Don't touch casually" zones: the verbatim ports above and character-forge `i18n.js` (10 languages).
 - Desktop-first: the ~680px module column needs viewport ≳1100px beside the 232px sidebar; narrower clips horizontally — widen before responsive/screenshot checks.
 - **Never `git add -A` / `git add .`** — stage explicit paths (`git add <file>`). A stray SSH key once got swept into a commit this way; keys/secrets are gitignored but don't rely on it.
