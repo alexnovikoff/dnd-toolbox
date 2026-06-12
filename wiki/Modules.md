@@ -37,7 +37,7 @@ Circular character tokens with procedural frames for Foundry VTT and the table
 ## Tavern Builder (`@dnd/tavern-builder`)
 
 A bilingual tavern generator for the GM (tag `#b07a3f`, icon `tavern`, group
-`locations`), built from the `design_handoff_tavern_builder/` package (layout A
+`locations`), built from the `reference_sources/design_handoff_tavern_builder/` package (layout A
 «Кабинет мастера»).
 
 - **Table-driven, no AI for generation:** `src/data.js` (curated RU/EN content

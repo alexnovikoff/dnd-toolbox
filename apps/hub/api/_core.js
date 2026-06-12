@@ -92,7 +92,7 @@ function sanitizeFacts(s) {
 
 // «Оживить описание» (Tavern Builder) — 2–3 sentences of read-aloud text.
 // Prompt text is verbatim from the design handoff
-// (design_handoff_tavern_builder/design-reference/tavern-module.jsx, enliven()).
+// (reference_sources/design_handoff_tavern_builder/design-reference/tavern-module.jsx, enliven()).
 export function buildTavernEnliven(p) {
   const facts = sanitizeFacts(p.facts);
   return {

@@ -2,7 +2,7 @@
 // Pure JS, no JSX/React. A tavern is a plain object of 5 blocks; each block
 // stores picked table entries (with both languages inside), so switching
 // language never rerolls. The handoff original
-// (design_handoff_tavern_builder/design-reference/tavern-engine.js) is
+// (reference_sources/design_handoff_tavern_builder/design-reference/tavern-engine.js) is
 // preserved; name templates (nameKind) were added on top of it.
 import { TAVERN_DATA as D } from './data.js';
 

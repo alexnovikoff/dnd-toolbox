@@ -1,7 +1,8 @@
 // frames.js — procedural frame graphics for the Token Creator.
 //
 // These texture + frame-drawing routines are ported VERBATIM from the original
-// tool (foundry-token-creator/src/main.js, via design-reference/token-creator.jsx).
+// tool (reference_sources/foundry-token-creator/src/main.js, via
+// reference_sources/design_handoff_dnd_toolbox/design-reference/token-creator.jsx).
 // Do not change the graphics — `frameDefs` exposes the 10 built-in frames.
 //
 // Each draw function takes a 2D canvas context `c` and a square size `s`.

@@ -25,3 +25,6 @@ id_ed25519*
 
 # local Claude memory (not shared)
 .claude.local.md
+
+# local reference sources (historical apps & design handoffs) — never push
+reference_sources/
