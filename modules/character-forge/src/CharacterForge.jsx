@@ -13,7 +13,7 @@ import {
   CLASSES,
   FIRST_NAMES,
   LAST_NAMES,
-  rand,
+  randL,
   sanitize,
 } from './i18n.js';
 import { generateCharacter, regenerateSection, getUserKey, setUserKey } from './api.js';
@@ -98,6 +98,10 @@ export default function CharacterForge() {
     setUserKeyState('');
     setKeyDraft('');
   };
+
+  const rollName = () => setName(`${randL(FIRST_NAMES, lang)} ${randL(LAST_NAMES, lang)}`);
+  const rollRace = () => setRace(randL(RACES, lang));
+  const rollCls = () => setCls(randL(CLASSES, lang));
 
   const generate = useCallback(async () => {
     const sName = sanitize(name);
@@ -214,24 +218,24 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
             label={t.name}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Kael Duskmantle"
-            right={<Dice label={t.randomAll} onClick={() => setName(`${rand(FIRST_NAMES)} ${rand(LAST_NAMES)}`)} />}
+            placeholder={t.namePlaceholder ?? UI.en.namePlaceholder}
+            right={<Dice label={t.name} onClick={rollName} />}
             style={{ marginBottom: 14 }}
           />
           <Field
             label={t.race}
             value={race}
             onChange={(e) => setRace(e.target.value)}
-            placeholder="Tiefling"
-            right={<Dice label={t.race} onClick={() => setRace(rand(RACES))} />}
+            placeholder={t.racePlaceholder ?? UI.en.racePlaceholder}
+            right={<Dice label={t.race} onClick={rollRace} />}
             style={{ marginBottom: 14 }}
           />
           <Field
             label={t.cls}
             value={cls}
             onChange={(e) => setCls(e.target.value)}
-            placeholder="Warlock"
-            right={<Dice label={t.cls} onClick={() => setCls(rand(CLASSES))} />}
+            placeholder={t.clsPlaceholder ?? UI.en.clsPlaceholder}
+            right={<Dice label={t.cls} onClick={rollCls} />}
             style={{ marginBottom: 14 }}
           />
           <Field
@@ -267,9 +271,9 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
             <Button
               variant="secondary"
               onClick={() => {
-                setName(`${rand(FIRST_NAMES)} ${rand(LAST_NAMES)}`);
-                setRace(rand(RACES));
-                setCls(rand(CLASSES));
+                rollName();
+                rollRace();
+                rollCls();
               }}
             >
               {t.randomAll}

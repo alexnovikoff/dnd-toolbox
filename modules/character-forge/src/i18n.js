@@ -1,5 +1,6 @@
-// i18n.js — Character Forge strings + data tables (10 languages preserved
-// verbatim from the original dnd-character-generator). The generation prompt and
+// i18n.js — Character Forge strings + data tables (UI strings: 10 languages
+// preserved verbatim from the original dnd-character-generator; roll tables:
+// ru/en pairs, other languages fall back to en). The generation prompt and
 // language handling now live server-side (apps/hub/api/_core.js); this file only
 // drives the UI.
 
@@ -36,27 +37,106 @@ export const SECTION_EMOJI = {
   secret_desire: '🕯️',
 };
 
+// Roll tables: ru/en pairs (tavern-builder pattern; i18n.test.js guards the shape).
+// Races/classes use canonical Russian D&D terms; first names are transliterated;
+// surnames mix calques and transliteration, curated per entry. UI languages other
+// than ru fall back to en via randL.
 export const RACES = [
-  'Human', 'Elf', 'Half-Elf', 'Dwarf', 'Halfling', 'Gnome', 'Tiefling', 'Dragonborn',
-  'Orc', 'Half-Orc', 'Aasimar', 'Tabaxi', 'Kenku', 'Firbolg', 'Genasi', 'Changeling', 'Kalashtar',
+  { en: 'Human', ru: 'Человек' },
+  { en: 'Elf', ru: 'Эльф' },
+  { en: 'Half-Elf', ru: 'Полуэльф' },
+  { en: 'Dwarf', ru: 'Дварф' },
+  { en: 'Halfling', ru: 'Полурослик' },
+  { en: 'Gnome', ru: 'Гном' },
+  { en: 'Tiefling', ru: 'Тифлинг' },
+  { en: 'Dragonborn', ru: 'Драконорождённый' },
+  { en: 'Orc', ru: 'Орк' },
+  { en: 'Half-Orc', ru: 'Полуорк' },
+  { en: 'Aasimar', ru: 'Аасимар' },
+  { en: 'Tabaxi', ru: 'Табакси' },
+  { en: 'Kenku', ru: 'Кенку' },
+  { en: 'Firbolg', ru: 'Фирболг' },
+  { en: 'Genasi', ru: 'Генази' },
+  { en: 'Changeling', ru: 'Подменыш' },
+  { en: 'Kalashtar', ru: 'Калаштар' },
 ];
 export const CLASSES = [
-  'Fighter', 'Wizard', 'Rogue', 'Cleric', 'Ranger', 'Paladin', 'Barbarian', 'Bard',
-  'Druid', 'Monk', 'Sorcerer', 'Warlock', 'Artificer', 'Blood Hunter', 'Mystic',
+  { en: 'Fighter', ru: 'Воин' },
+  { en: 'Wizard', ru: 'Волшебник' },
+  { en: 'Rogue', ru: 'Плут' },
+  { en: 'Cleric', ru: 'Жрец' },
+  { en: 'Ranger', ru: 'Следопыт' },
+  { en: 'Paladin', ru: 'Паладин' },
+  { en: 'Barbarian', ru: 'Варвар' },
+  { en: 'Bard', ru: 'Бард' },
+  { en: 'Druid', ru: 'Друид' },
+  { en: 'Monk', ru: 'Монах' },
+  { en: 'Sorcerer', ru: 'Чародей' },
+  { en: 'Warlock', ru: 'Колдун' },
+  { en: 'Artificer', ru: 'Изобретатель' },
+  { en: 'Blood Hunter', ru: 'Кровавый охотник' },
+  { en: 'Mystic', ru: 'Мистик' },
 ];
 export const FIRST_NAMES = [
-  'Aerin', 'Bryn', 'Calix', 'Dara', 'Edrin', 'Fael', 'Gareth', 'Hilda', 'Isra', 'Jorin',
-  'Kael', 'Lyra', 'Maren', 'Nyx', 'Orin', 'Petra', 'Quill', 'Riven', 'Sable', 'Thorn',
-  'Ursa', 'Vex', 'Wren', 'Xan', 'Yael', 'Zara',
+  { en: 'Aerin', ru: 'Аэрин' },
+  { en: 'Bryn', ru: 'Брин' },
+  { en: 'Calix', ru: 'Каликс' },
+  { en: 'Dara', ru: 'Дара' },
+  { en: 'Edrin', ru: 'Эдрин' },
+  { en: 'Fael', ru: 'Фаэль' },
+  { en: 'Gareth', ru: 'Гарет' },
+  { en: 'Hilda', ru: 'Хильда' },
+  { en: 'Isra', ru: 'Исра' },
+  { en: 'Jorin', ru: 'Джорин' },
+  { en: 'Kael', ru: 'Каэль' },
+  { en: 'Lyra', ru: 'Лира' },
+  { en: 'Maren', ru: 'Марен' },
+  { en: 'Nyx', ru: 'Никс' },
+  { en: 'Orin', ru: 'Орин' },
+  { en: 'Petra', ru: 'Петра' },
+  { en: 'Quill', ru: 'Квилл' },
+  { en: 'Riven', ru: 'Ривен' },
+  { en: 'Sable', ru: 'Сейбл' },
+  { en: 'Thorn', ru: 'Торн' },
+  { en: 'Ursa', ru: 'Урса' },
+  { en: 'Vex', ru: 'Векс' },
+  { en: 'Wren', ru: 'Рен' },
+  { en: 'Xan', ru: 'Ксан' },
+  { en: 'Yael', ru: 'Яэль' },
+  { en: 'Zara', ru: 'Зара' },
 ];
 export const LAST_NAMES = [
-  'Ashwood', 'Blackthorn', 'Coldwater', 'Duskmantle', 'Emberveil', 'Frostmere', 'Graymoor',
-  'Hollowfield', 'Ironforge', 'Jadewing', 'Kindlewick', 'Loreweave', 'Moonshadow', 'Nighthollow',
-  'Oakenshield', 'Pyre', 'Quicksilver', 'Ravenmoor', 'Stonehaven', 'Timberfall', 'Underhill',
-  'Valecroft', 'Whitlock', 'Xandrel',
+  { en: 'Ashwood', ru: 'Эшвуд' },
+  { en: 'Blackthorn', ru: 'Чернотерн' },
+  { en: 'Coldwater', ru: 'Хладвод' },
+  { en: 'Duskmantle', ru: 'Даскмантл' },
+  { en: 'Emberveil', ru: 'Эмбервейл' },
+  { en: 'Frostmere', ru: 'Фростмир' },
+  { en: 'Graymoor', ru: 'Греймур' },
+  { en: 'Hollowfield', ru: 'Холлоуфилд' },
+  { en: 'Ironforge', ru: 'Стальгорн' },
+  { en: 'Jadewing', ru: 'Нефритокрыл' },
+  { en: 'Kindlewick', ru: 'Киндлвик' },
+  { en: 'Loreweave', ru: 'Лорвив' },
+  { en: 'Moonshadow', ru: 'Лунотень' },
+  { en: 'Nighthollow', ru: 'Ночедол' },
+  { en: 'Oakenshield', ru: 'Дубощит' },
+  { en: 'Pyre', ru: 'Пламень' },
+  { en: 'Quicksilver', ru: 'Квиксильвер' },
+  { en: 'Ravenmoor', ru: 'Рейвенмур' },
+  { en: 'Stonehaven', ru: 'Камнеград' },
+  { en: 'Timberfall', ru: 'Лесопад' },
+  { en: 'Underhill', ru: 'Подхолм' },
+  { en: 'Valecroft', ru: 'Вейлкрофт' },
+  { en: 'Whitlock', ru: 'Уитлок' },
+  { en: 'Xandrel', ru: 'Ксандрел' },
 ];
 
 export const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
+export const randL = (arr, lang) => {
+  const e = rand(arr);
+  return e[lang] ?? e.en;
+};
 export const sanitize = (str) =>
   String(str || '')
     .replace(/[\\"`]/g, ' ')
@@ -64,8 +144,8 @@ export const sanitize = (str) =>
     .trim();
 
 export const UI = {
-  ru: { title: 'Кузница Персонажей', subtitle: 'Генератор персонажей для D&D', name: 'Имя', race: 'Раса', cls: 'Класс', vibe: 'Образ / Концепция', vibeOpt: '(необязательно)', vibePlaceholder: '"мрачный бывший солдат"', randomAll: '🎲 Случайный персонаж', generate: '⚒ Создать персонажа', generating: 'Создаём…', fates: 'Судьбы ткут историю вашего персонажа…', copyAll: '📋 Копировать', copied: '✓ Скопировано!', redo: '↺ Заново', generateNew: '⚒ Создать нового', error: 'Заполните хотя бы одно поле.', gender: 'Пол', male: 'Мужской', female: 'Женский', other: 'Другой', length: 'Длина', short: 'Коротко', normal: 'Обычно', long: 'Подробно', freeLeft: 'Осталось бесплатных генераций: {n}', freeLimitText: 'Бесплатные генерации закончились. Добавьте свой API-ключ Anthropic, чтобы продолжить.', apiKey: 'API-ключ', keyPlaceholder: 'sk-ant-…', save: 'Сохранить', clearKey: 'Удалить ключ', usingOwnKey: 'Используется ваш API-ключ', invalidKey: 'Неверный API-ключ. Проверьте его и попробуйте снова.', keyNote: 'Ключ хранится только в этом браузере.', getKey: 'Получить ключ', sections: { backstory: 'Предыстория', personality: 'Личность', goals: 'Цели', flaws: 'Изъяны', secret_desire: 'Тайное желание' } },
-  en: { title: 'Character Forge', subtitle: 'D&D & Storytelling Character Generator', name: 'Name', race: 'Race', cls: 'Class', vibe: 'Vibe / Concept', vibeOpt: '(optional)', vibePlaceholder: '"brooding ex-soldier"', randomAll: '🎲 Randomize All', generate: '⚒ Generate Character', generating: 'Forging…', fates: "The fates are weaving your character's story…", copyAll: '📋 Copy All', copied: '✓ Copied!', redo: '↺ Redo', generateNew: '⚒ Generate New', error: 'Fill in at least one field.', gender: 'Gender', male: 'Male', female: 'Female', other: 'Other', length: 'Length', short: 'Short', normal: 'Normal', long: 'Detailed', freeLeft: 'Free generations left: {n}', freeLimitText: 'You have used all free generations. Add your own Anthropic API key to continue.', apiKey: 'API key', keyPlaceholder: 'sk-ant-…', save: 'Save', clearKey: 'Remove key', usingOwnKey: 'Using your own API key', invalidKey: 'Invalid API key. Check it and try again.', keyNote: 'The key is stored only in this browser.', getKey: 'Get a key', sections: { backstory: 'Backstory', personality: 'Personality', goals: 'Goals', flaws: 'Flaws', secret_desire: 'Secret Desire' } },
+  ru: { title: 'Кузница Персонажей', subtitle: 'Генератор персонажей для D&D', name: 'Имя', race: 'Раса', cls: 'Класс', vibe: 'Образ / Концепция', vibeOpt: '(необязательно)', vibePlaceholder: '"мрачный бывший солдат"', namePlaceholder: 'Каэль Лунотень', racePlaceholder: 'Тифлинг', clsPlaceholder: 'Колдун', randomAll: '🎲 Случайный персонаж', generate: '⚒ Создать персонажа', generating: 'Создаём…', fates: 'Судьбы ткут историю вашего персонажа…', copyAll: '📋 Копировать', copied: '✓ Скопировано!', redo: '↺ Заново', generateNew: '⚒ Создать нового', error: 'Заполните хотя бы одно поле.', gender: 'Пол', male: 'Мужской', female: 'Женский', other: 'Другой', length: 'Длина', short: 'Коротко', normal: 'Обычно', long: 'Подробно', freeLeft: 'Осталось бесплатных генераций: {n}', freeLimitText: 'Бесплатные генерации закончились. Добавьте свой API-ключ Anthropic, чтобы продолжить.', apiKey: 'API-ключ', keyPlaceholder: 'sk-ant-…', save: 'Сохранить', clearKey: 'Удалить ключ', usingOwnKey: 'Используется ваш API-ключ', invalidKey: 'Неверный API-ключ. Проверьте его и попробуйте снова.', keyNote: 'Ключ хранится только в этом браузере.', getKey: 'Получить ключ', sections: { backstory: 'Предыстория', personality: 'Личность', goals: 'Цели', flaws: 'Изъяны', secret_desire: 'Тайное желание' } },
+  en: { title: 'Character Forge', subtitle: 'D&D & Storytelling Character Generator', name: 'Name', race: 'Race', cls: 'Class', vibe: 'Vibe / Concept', vibeOpt: '(optional)', vibePlaceholder: '"brooding ex-soldier"', namePlaceholder: 'Kael Duskmantle', racePlaceholder: 'Tiefling', clsPlaceholder: 'Warlock', randomAll: '🎲 Randomize All', generate: '⚒ Generate Character', generating: 'Forging…', fates: "The fates are weaving your character's story…", copyAll: '📋 Copy All', copied: '✓ Copied!', redo: '↺ Redo', generateNew: '⚒ Generate New', error: 'Fill in at least one field.', gender: 'Gender', male: 'Male', female: 'Female', other: 'Other', length: 'Length', short: 'Short', normal: 'Normal', long: 'Detailed', freeLeft: 'Free generations left: {n}', freeLimitText: 'You have used all free generations. Add your own Anthropic API key to continue.', apiKey: 'API key', keyPlaceholder: 'sk-ant-…', save: 'Save', clearKey: 'Remove key', usingOwnKey: 'Using your own API key', invalidKey: 'Invalid API key. Check it and try again.', keyNote: 'The key is stored only in this browser.', getKey: 'Get a key', sections: { backstory: 'Backstory', personality: 'Personality', goals: 'Goals', flaws: 'Flaws', secret_desire: 'Secret Desire' } },
   de: { title: 'Charakterschmiede', subtitle: 'D&D Charaktergenerator', name: 'Name', race: 'Rasse', cls: 'Klasse', vibe: 'Stimmung', vibeOpt: '(optional)', vibePlaceholder: '"grüblerischer Ex-Soldat"', randomAll: '🎲 Alle zufällig', generate: '⚒ Erstellen', generating: 'Schmieden…', fates: 'Das Schicksal webt deine Geschichte…', copyAll: '📋 Kopieren', copied: '✓ Kopiert!', redo: '↺ Neu', generateNew: '⚒ Neuer Charakter', error: 'Mindestens ein Feld ausfüllen.', gender: 'Geschlecht', male: 'Männlich', female: 'Weiblich', other: 'Divers', length: 'Länge', short: 'Kurz', normal: 'Normal', long: 'Ausführlich', freeLeft: 'Verbleibende Gratis-Generierungen: {n}', freeLimitText: 'Alle Gratis-Generierungen verbraucht. Füge deinen eigenen Anthropic-API-Schlüssel hinzu, um fortzufahren.', apiKey: 'API-Schlüssel', keyPlaceholder: 'sk-ant-…', save: 'Speichern', clearKey: 'Schlüssel entfernen', usingOwnKey: 'Eigener API-Schlüssel aktiv', invalidKey: 'Ungültiger API-Schlüssel. Bitte prüfen und erneut versuchen.', keyNote: 'Der Schlüssel wird nur in diesem Browser gespeichert.', getKey: 'Schlüssel holen', sections: { backstory: 'Hintergrund', personality: 'Persönlichkeit', goals: 'Ziele', flaws: 'Schwächen', secret_desire: 'Geheimer Wunsch' } },
   fr: { title: 'Forge de Personnage', subtitle: 'Générateur D&D', name: 'Nom', race: 'Race', cls: 'Classe', vibe: 'Ambiance', vibeOpt: '(optionnel)', vibePlaceholder: '"ancien soldat taciturne"', randomAll: '🎲 Tout aléatoire', generate: '⚒ Générer', generating: 'Forgeage…', fates: 'Les destins tissent votre histoire…', copyAll: '📋 Copier', copied: '✓ Copié!', redo: '↺ Refaire', generateNew: '⚒ Nouveau', error: 'Remplissez au moins un champ.', gender: 'Genre', male: 'Masculin', female: 'Féminin', other: 'Autre', length: 'Longueur', short: 'Court', normal: 'Normal', long: 'Détaillé', freeLeft: 'Générations gratuites restantes : {n}', freeLimitText: 'Vous avez utilisé toutes les générations gratuites. Ajoutez votre clé API Anthropic pour continuer.', apiKey: 'Clé API', keyPlaceholder: 'sk-ant-…', save: 'Enregistrer', clearKey: 'Supprimer la clé', usingOwnKey: 'Votre clé API est utilisée', invalidKey: 'Clé API invalide. Vérifiez-la et réessayez.', keyNote: 'La clé reste uniquement dans ce navigateur.', getKey: 'Obtenir une clé', sections: { backstory: 'Histoire', personality: 'Personnalité', goals: 'Objectifs', flaws: 'Défauts', secret_desire: 'Désir secret' } },
   es: { title: 'Forja de Personajes', subtitle: 'Generador D&D', name: 'Nombre', race: 'Raza', cls: 'Clase', vibe: 'Vibra', vibeOpt: '(opcional)', vibePlaceholder: '"ex-soldado sombrío"', randomAll: '🎲 Aleatorizar', generate: '⚒ Generar', generating: 'Forjando…', fates: 'Los destinos tejen tu historia…', copyAll: '📋 Copiar', copied: '✓ Copiado!', redo: '↺ Rehacer', generateNew: '⚒ Nuevo', error: 'Rellena al menos un campo.', gender: 'Género', male: 'Masculino', female: 'Femenino', other: 'Otro', length: 'Longitud', short: 'Corto', normal: 'Normal', long: 'Detallado', freeLeft: 'Generaciones gratis restantes: {n}', freeLimitText: 'Has usado todas las generaciones gratis. Añade tu propia clave API de Anthropic para continuar.', apiKey: 'Clave API', keyPlaceholder: 'sk-ant-…', save: 'Guardar', clearKey: 'Quitar clave', usingOwnKey: 'Usando tu propia clave API', invalidKey: 'Clave API no válida. Compruébala e inténtalo de nuevo.', keyNote: 'La clave se guarda solo en este navegador.', getKey: 'Obtener clave', sections: { backstory: 'Historia', personality: 'Personalidad', goals: 'Objetivos', flaws: 'Defectos', secret_desire: 'Deseo secreto' } },
