@@ -77,6 +77,55 @@ Respond ONLY with JSON: {"${sec}":"new content"}`,
   };
 }
 
+// Alternative "lens" generators (Character Forge tabs). Each maps stable field
+// keys → the English question the model answers (it still replies in p.lang).
+// The localized labels shown in the UI live client-side (forge-tabs.js).
+const DRIVES_FIELDS = {
+  flees: 'What is the character running toward, or running away from — or both?',
+  lie: 'What lie does the character believe?',
+  loss: 'What will be lost if nothing changes?',
+};
+const SHADOW_FIELDS = {
+  line: 'A line the character has sworn never to cross.',
+  unspoken_desire: 'A desire the character will not admit aloud.',
+  regret: 'A mistake the character would undo if they could.',
+  false_strength: 'A weakness disguised as strength.',
+  feared_self: 'The version of themselves the character is afraid of becoming.',
+  realization: 'The moment the character realized they were wrong.',
+};
+export const DRIVES_KEYS = Object.keys(DRIVES_FIELDS);
+export const SHADOW_KEYS = Object.keys(SHADOW_FIELDS);
+
+// Shared builder for the lens tabs: same seed/gender/length/language handling
+// as buildFull, but the output is the answers to a fixed set of questions.
+function buildQuestions(p, fields, maxTokens) {
+  const len = LENGTH_SPEC[p.length] || LENGTH_SPEC.normal;
+  const keys = Object.keys(fields);
+  const questions = keys.map((k) => `- "${k}": ${fields[k]}`).join('\n');
+  const shape = `{${keys.map((k) => `"${k}":"..."`).join(',')}}`;
+  return {
+    max_tokens: maxTokens,
+    content: `You are a creative D&D character designer. For the character below, answer each question with a vivid, specific, original insight. Respond entirely in ${langName(p.lang)}.
+
+Character seed:
+- Name: ${sanitize(p.name) || 'unknown'}
+- Race: ${sanitize(p.race) || 'unknown'}
+- Class: ${sanitize(p.cls) || 'unknown'}
+- Vibe/Concept: ${sanitize(p.vibe) || 'none'}${genderNote(p.lang, p.gender)}
+
+Answer each of these about the character. Each answer must be ${len} long:
+${questions}
+
+Respond ONLY with a valid JSON object (no markdown, no backticks), using exactly these keys:
+${shape}
+
+Be vivid, specific, avoid clichés.`,
+  };
+}
+
+export const buildDrives = (p) => buildQuestions(p, DRIVES_FIELDS, 600);
+export const buildShadow = (p) => buildQuestions(p, SHADOW_FIELDS, 1200);
+
 // Multi-line tavern facts from the client: strip injection-prone characters
 // per line but keep the line structure the prompt template expects.
 function sanitizeFacts(s) {
@@ -186,7 +235,9 @@ export async function handleGenerate({
     }
   }
 
-  const mode = ['section', 'tavern_enliven'].includes(body.mode) ? body.mode : 'full';
+  const mode = ['section', 'tavern_enliven', 'forge_drives', 'forge_shadow'].includes(body.mode)
+    ? body.mode
+    : 'full';
   if (mode === 'section' && !SECTIONS.includes(body.section)) {
     return { status: 400, json: { error: 'Invalid section.' } };
   }
@@ -199,7 +250,11 @@ export async function handleGenerate({
       ? buildSection(body)
       : mode === 'tavern_enliven'
         ? buildTavernEnliven(body)
-        : buildFull(body);
+        : mode === 'forge_drives'
+          ? buildDrives(body)
+          : mode === 'forge_shadow'
+            ? buildShadow(body)
+            : buildFull(body);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

@@ -3,7 +3,15 @@
 // developer's own subscription. Personal use only. Imported exclusively by
 // _dev-middleware.js — never by generate.js — so it cannot reach production.
 import { spawn } from 'node:child_process';
-import { buildFull, buildSection, buildTavernEnliven, extractFields, SECTIONS } from './_core.js';
+import {
+  buildFull,
+  buildSection,
+  buildTavernEnliven,
+  buildDrives,
+  buildShadow,
+  extractFields,
+  SECTIONS,
+} from './_core.js';
 
 const TIMEOUT_MS = 90_000;
 
@@ -65,7 +73,9 @@ function defaultRunClaude(prompt) {
 // Local-mode handler: same validation and response shapes as handleGenerate,
 // but no quota/BYOK and no `remaining` field (it's the owner's machine).
 export async function handleGenerateLocal({ body = {}, runClaude = defaultRunClaude } = {}) {
-  const mode = ['section', 'tavern_enliven'].includes(body.mode) ? body.mode : 'full';
+  const mode = ['section', 'tavern_enliven', 'forge_drives', 'forge_shadow'].includes(body.mode)
+    ? body.mode
+    : 'full';
   if (mode === 'section' && !SECTIONS.includes(body.section)) {
     return { status: 400, json: { error: 'Invalid section.' } };
   }
@@ -77,7 +87,11 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
       ? buildSection(body)
       : mode === 'tavern_enliven'
         ? buildTavernEnliven(body)
-        : buildFull(body);
+        : mode === 'forge_drives'
+          ? buildDrives(body)
+          : mode === 'forge_shadow'
+            ? buildShadow(body)
+            : buildFull(body);
 
   let run;
   try {

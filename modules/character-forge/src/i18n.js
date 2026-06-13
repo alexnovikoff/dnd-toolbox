@@ -75,7 +75,6 @@ export const CLASSES = [
   { en: 'Warlock', ru: 'Колдун' },
   { en: 'Artificer', ru: 'Изобретатель' },
   { en: 'Blood Hunter', ru: 'Кровавый охотник' },
-  { en: 'Mystic', ru: 'Мистик' },
 ];
 export const FIRST_NAMES = [
   { en: 'Aerin', ru: 'Аэрин' },

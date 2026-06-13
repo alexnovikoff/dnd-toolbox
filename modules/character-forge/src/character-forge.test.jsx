@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from '@dnd/design-system';
 import { manifest, Component } from './index.jsx';
 import { UI, RACES, FIRST_NAMES, LAST_NAMES } from './i18n.js';
+import { tabLabel } from './forge-tabs.js';
 
 const FIELDS = {
   backstory: 'A quiet life upended by fire.',
@@ -9,6 +10,13 @@ const FIELDS = {
   goals: 'Find the missing ledger.',
   flaws: 'Trusts no one.',
   secret_desire: 'To be forgiven.',
+};
+
+// Distinct answers for the "drives" lens tab (mode forge_drives).
+const DRIVES = {
+  flees: 'Runs toward a redemption that keeps receding.',
+  lie: 'Believes mercy is a debt others owe.',
+  loss: 'The last person who still calls them by name.',
 };
 
 function mockFetchOnce() {
@@ -23,6 +31,18 @@ function mockFetchOnce() {
       status: 200,
       json: async () => ({ fields: FIELDS, remaining: 9 }),
     };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+// Returns the field set keyed by the request `mode`, so a single render can
+// generate on more than one tab.
+function mockFetchByMode(byMode) {
+  const fetchMock = vi.fn(async (url, opts) => {
+    const body = JSON.parse(opts.body);
+    const fields = byMode[body.mode] || FIELDS;
+    return { ok: true, status: 200, json: async () => ({ fields, remaining: 9 }) };
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -157,5 +177,73 @@ describe('character-forge', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'en' } });
     fireEvent.click(screen.getByRole('button', { name: UI.en.race }));
     expect(RACES.map((r) => r.en)).toContain(race.value);
+  });
+
+  it('generates the active alternative tab and sends its mode', async () => {
+    const fetchMock = mockFetchByMode({ forge_drives: DRIVES });
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    fireEvent.change(screen.getByPlaceholderText(UI.ru.namePlaceholder), {
+      target: { value: 'Kael' },
+    });
+    // switch to the "drives" lens tab, then generate
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('drives', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+
+    expect(await screen.findByText(DRIVES.flees)).toBeInTheDocument();
+    expect(screen.getByText(DRIVES.loss)).toBeInTheDocument();
+    const sent = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(sent.mode).toBe('forge_drives');
+  });
+
+  it('keeps each tab result independent across tab switches', async () => {
+    mockFetchByMode({ full: FIELDS, forge_drives: DRIVES });
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    fireEvent.change(screen.getByPlaceholderText(UI.ru.namePlaceholder), {
+      target: { value: 'Kael' },
+    });
+    // generate the classic tab
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(FIELDS.backstory)).toBeInTheDocument();
+
+    // switch to drives and generate — classic result leaves the view
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('drives', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(DRIVES.flees)).toBeInTheDocument();
+    expect(screen.queryByText(FIELDS.backstory)).toBeNull();
+
+    // switch back — the classic result is still there, not reset
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('classic', 'ru') }));
+    expect(screen.getByText(FIELDS.backstory)).toBeInTheDocument();
+  });
+
+  it('drops other tabs results when generating for changed character inputs', async () => {
+    mockFetchByMode({ full: FIELDS, forge_drives: DRIVES });
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    const nameInput = screen.getByPlaceholderText(UI.ru.namePlaceholder);
+    fireEvent.change(nameInput, { target: { value: 'Kael' } });
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(FIELDS.backstory)).toBeInTheDocument();
+
+    // change the character inputs, then generate a different tab
+    fireEvent.change(nameInput, { target: { value: 'Bryn' } });
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('drives', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(DRIVES.flees)).toBeInTheDocument();
+
+    // the classic result was for the old character — it has been dropped
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('classic', 'ru') }));
+    expect(screen.queryByText(FIELDS.backstory)).toBeNull();
   });
 });

@@ -58,3 +58,9 @@ export function generateCharacter(params) {
 export function regenerateSection(params) {
   return post({ mode: 'section', ...params });
 }
+
+// Generate an alternative "lens" tab (drives / shadow). The mode comes from
+// TAB_MODE in forge-tabs.js. params: { name, race, cls, vibe, gender, length, lang }
+export function generateForge(mode, params) {
+  return post({ mode, ...params });
+}
