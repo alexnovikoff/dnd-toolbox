@@ -57,6 +57,9 @@ export default function CharacterForge() {
   const [results, setResults] = useState({});
   const [loading, setLoading] = useState({});
   const [error, setError] = useState({});
+  // Signature of the character inputs the current results belong to; when it
+  // changes, the other tabs' results describe a different character.
+  const [seedSig, setSeedSig] = useState('');
   const [regenLoading, setRegenLoading] = useState({});
   const [copied, setCopied] = useState(false);
   const [userKey, setUserKeyState] = useState(() => getUserKey());
@@ -115,9 +118,14 @@ export default function CharacterForge() {
       setError((p) => ({ ...p, [tab]: t.error }));
       return;
     }
-    setError((p) => ({ ...p, [tab]: '' }));
-    setLoading((p) => ({ ...p, [tab]: true }));
-    setResults((p) => ({ ...p, [tab]: null }));
+    // New character inputs (name/race/class/vibe) invalidate the other tabs'
+    // results, so drop them; same inputs keep them (cross-tab independence).
+    const sig = JSON.stringify([sName, sRace, sCls, sVibe]);
+    const freshChar = sig !== seedSig;
+    setSeedSig(sig);
+    setError((p) => (freshChar ? {} : { ...p, [tab]: '' }));
+    setLoading((p) => ({ ...(freshChar ? {} : p), [tab]: true }));
+    setResults((p) => ({ ...(freshChar ? {} : p), [tab]: null }));
     try {
       const mode = TAB_MODE[tab];
       const params = { name: sName, race: sRace, cls: sCls, vibe: sVibe, gender, length, lang };
@@ -129,7 +137,7 @@ export default function CharacterForge() {
       handleApiError(e, tab);
     }
     setLoading((p) => ({ ...p, [tab]: false }));
-  }, [name, race, cls, vibe, lang, gender, length, t, handleApiError, activeTab]);
+  }, [name, race, cls, vibe, lang, gender, length, t, handleApiError, activeTab, seedSig]);
 
   // Per-section ↺ regenerate — classic tab only (v1).
   const regenSection = useCallback(
@@ -215,16 +223,6 @@ export default function CharacterForge() {
               style={{ width: '100%' }}
             />
           </div>
-        </div>
-
-        {/* Generation tabs: classic first, then the alternative lenses */}
-        <div style={{ marginBottom: 18 }}>
-          <ToggleGroup
-            options={TAB_IDS}
-            value={activeTab}
-            onChange={setActiveTab}
-            labels={Object.fromEntries(TAB_IDS.map((id) => [id, tabLabel(id, lang)]))}
-          />
         </div>
 
         {/* Input card */}
@@ -370,6 +368,16 @@ export default function CharacterForge() {
               </p>
             </div>
           )}
+        </div>
+
+        {/* Generation tabs — pick which lens to generate for the data above */}
+        <div style={{ marginBottom: 24 }}>
+          <ToggleGroup
+            options={TAB_IDS}
+            value={activeTab}
+            onChange={setActiveTab}
+            labels={Object.fromEntries(TAB_IDS.map((id) => [id, tabLabel(id, lang)]))}
+          />
         </div>
 
         {/* Loading */}

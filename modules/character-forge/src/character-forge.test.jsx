@@ -223,4 +223,27 @@ describe('character-forge', () => {
     fireEvent.click(screen.getByRole('button', { name: tabLabel('classic', 'ru') }));
     expect(screen.getByText(FIELDS.backstory)).toBeInTheDocument();
   });
+
+  it('drops other tabs results when generating for changed character inputs', async () => {
+    mockFetchByMode({ full: FIELDS, forge_drives: DRIVES });
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    const nameInput = screen.getByPlaceholderText(UI.ru.namePlaceholder);
+    fireEvent.change(nameInput, { target: { value: 'Kael' } });
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(FIELDS.backstory)).toBeInTheDocument();
+
+    // change the character inputs, then generate a different tab
+    fireEvent.change(nameInput, { target: { value: 'Bryn' } });
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('drives', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(DRIVES.flees)).toBeInTheDocument();
+
+    // the classic result was for the old character — it has been dropped
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('classic', 'ru') }));
+    expect(screen.queryByText(FIELDS.backstory)).toBeNull();
+  });
 });
