@@ -3,20 +3,15 @@
 // design system, and generation goes through the server proxy (./api.js).
 import { useState, useCallback } from 'react';
 import { Icon, Button, Field, Select, ToggleGroup, SANS, SERIF } from '@dnd/design-system';
+import { UI, LANGUAGES, RACES, CLASSES, FIRST_NAMES, LAST_NAMES, randL, sanitize } from './i18n.js';
 import {
-  UI,
-  LANGUAGES,
-  SECTIONS,
-  SECTION_ICONS,
-  SECTION_EMOJI,
-  RACES,
-  CLASSES,
-  FIRST_NAMES,
-  LAST_NAMES,
-  randL,
-  sanitize,
-} from './i18n.js';
-import { generateCharacter, regenerateSection, getUserKey, setUserKey } from './api.js';
+  generateCharacter,
+  generateForge,
+  regenerateSection,
+  getUserKey,
+  setUserKey,
+} from './api.js';
+import { TAB_IDS, TAB_MODE, TAB_FIELDS, tabLabel, fieldLabel } from './forge-tabs.js';
 
 function Dice({ onClick, label }) {
   return (
@@ -56,10 +51,13 @@ export default function CharacterForge() {
   const [vibe, setVibe] = useState('');
   const [gender, setGender] = useState('male');
   const [length, setLength] = useState('normal');
-  const [character, setCharacter] = useState(null);
-  const [loading, setLoading] = useState(false);
+  // Per-tab state: each tab keeps its own result/loading/error so switching
+  // tabs never discards an already-generated result.
+  const [activeTab, setActiveTab] = useState('classic');
+  const [results, setResults] = useState({});
+  const [loading, setLoading] = useState({});
+  const [error, setError] = useState({});
   const [regenLoading, setRegenLoading] = useState({});
-  const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [userKey, setUserKeyState] = useState(() => getUserKey());
   const [remaining, setRemaining] = useState(null);
@@ -67,18 +65,22 @@ export default function CharacterForge() {
   const [keyDraft, setKeyDraft] = useState('');
 
   const t = UI[lang];
+  const result = results[activeTab] || null;
+  const isLoading = !!loading[activeTab];
+  const tabError = error[activeTab] || '';
 
   const handleApiError = useCallback(
-    (e) => {
+    (e, tab) => {
+      const set = (msg) => setError((p) => ({ ...p, [tab]: msg }));
       if (e?.code === 'free_quota_exhausted') {
         setRemaining(0);
         setKeyOpen(true);
-        setError(t.freeLimitText);
+        set(t.freeLimitText);
       } else if (e?.code === 'invalid_user_key') {
         setKeyOpen(true);
-        setError(t.invalidKey);
+        set(t.invalidKey);
       } else {
-        setError(e?.message || 'Something went wrong. Please try again.');
+        set(e?.message || 'Something went wrong. Please try again.');
       }
     },
     [t]
@@ -90,7 +92,7 @@ export default function CharacterForge() {
     setUserKey(k);
     setUserKeyState(k);
     setKeyDraft('');
-    setError('');
+    setError({});
   };
 
   const clearKey = () => {
@@ -108,59 +110,62 @@ export default function CharacterForge() {
     const sRace = sanitize(race);
     const sCls = sanitize(cls);
     const sVibe = sanitize(vibe);
+    const tab = activeTab;
     if (!sName && !sRace && !sCls) {
-      setError(t.error);
+      setError((p) => ({ ...p, [tab]: t.error }));
       return;
     }
-    setError('');
-    setLoading(true);
-    setCharacter(null);
+    setError((p) => ({ ...p, [tab]: '' }));
+    setLoading((p) => ({ ...p, [tab]: true }));
+    setResults((p) => ({ ...p, [tab]: null }));
     try {
-      const data = await generateCharacter({
-        name: sName,
-        race: sRace,
-        cls: sCls,
-        vibe: sVibe,
-        gender,
-        length,
-        lang,
-      });
-      setCharacter({ ...data.fields, name: sName, race: sRace, cls: sCls });
+      const mode = TAB_MODE[tab];
+      const params = { name: sName, race: sRace, cls: sCls, vibe: sVibe, gender, length, lang };
+      const data =
+        mode === 'full' ? await generateCharacter(params) : await generateForge(mode, params);
+      setResults((p) => ({ ...p, [tab]: { ...data.fields, name: sName, race: sRace, cls: sCls } }));
       if (data.remaining != null) setRemaining(data.remaining);
     } catch (e) {
-      handleApiError(e);
+      handleApiError(e, tab);
     }
-    setLoading(false);
-  }, [name, race, cls, vibe, lang, gender, length, t, handleApiError]);
+    setLoading((p) => ({ ...p, [tab]: false }));
+  }, [name, race, cls, vibe, lang, gender, length, t, handleApiError, activeTab]);
 
+  // Per-section ↺ regenerate — classic tab only (v1).
   const regenSection = useCallback(
     async (sec) => {
-      if (!character) return;
+      const current = results.classic;
+      if (!current) return;
       setRegenLoading((p) => ({ ...p, [sec]: true }));
       try {
-        const data = await regenerateSection({ section: sec, character, gender, length, lang });
-        setCharacter((p) => ({ ...p, ...data.fields }));
+        const data = await regenerateSection({
+          section: sec,
+          character: current,
+          gender,
+          length,
+          lang,
+        });
+        setResults((p) => ({ ...p, classic: { ...p.classic, ...data.fields } }));
         if (data.remaining != null) setRemaining(data.remaining);
       } catch (e) {
         if (e?.code === 'free_quota_exhausted' || e?.code === 'invalid_user_key') {
-          handleApiError(e);
+          handleApiError(e, 'classic');
         }
         /* otherwise keep previous content */
       }
       setRegenLoading((p) => ({ ...p, [sec]: false }));
     },
-    [character, lang, gender, length, handleApiError]
+    [results.classic, lang, gender, length, handleApiError]
   );
 
   const copyAll = useCallback(async () => {
-    if (!character) return;
-    const txt = `${character.name || '?'} — ${character.race || '?'} ${character.cls || '?'}
-
-${SECTION_EMOJI.backstory} ${t.sections.backstory}: ${character.backstory}
-${SECTION_EMOJI.personality} ${t.sections.personality}: ${character.personality}
-${SECTION_EMOJI.goals} ${t.sections.goals}: ${character.goals}
-${SECTION_EMOJI.flaws} ${t.sections.flaws}: ${character.flaws}
-${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_desire}`;
+    const current = results[activeTab];
+    if (!current) return;
+    const header = `${current.name || '?'} — ${current.race || '?'} ${current.cls || '?'}`;
+    const body = TAB_FIELDS[activeTab]
+      .map((f) => `${f.emoji} ${fieldLabel(activeTab, f, lang)}: ${current[f.key]}`)
+      .join('\n');
+    const txt = `${header}\n\n${body}`;
     try {
       await navigator.clipboard.writeText(txt);
     } catch {
@@ -174,7 +179,7 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [character, t]);
+  }, [results, activeTab, lang]);
 
   return (
     <div
@@ -210,6 +215,16 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
               style={{ width: '100%' }}
             />
           </div>
+        </div>
+
+        {/* Generation tabs: classic first, then the alternative lenses */}
+        <div style={{ marginBottom: 18 }}>
+          <ToggleGroup
+            options={TAB_IDS}
+            value={activeTab}
+            onChange={setActiveTab}
+            labels={Object.fromEntries(TAB_IDS.map((id) => [id, tabLabel(id, lang)]))}
+          />
         </div>
 
         {/* Input card */}
@@ -278,11 +293,13 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
             >
               {t.randomAll}
             </Button>
-            <Button onClick={generate} disabled={loading} style={{ flex: 1, fontSize: 15, padding: '12px 24px' }}>
-              {loading ? t.generating : t.generate}
+            <Button onClick={generate} disabled={isLoading} style={{ flex: 1, fontSize: 15, padding: '12px 24px' }}>
+              {isLoading ? t.generating : t.generate}
             </Button>
           </div>
-          {error && <p style={{ margin: '12px 0 0', color: 'var(--ds-danger)', fontSize: 13 }}>{error}</p>}
+          {tabError && (
+            <p style={{ margin: '12px 0 0', color: 'var(--ds-danger)', fontSize: 13 }}>{tabError}</p>
+          )}
 
           {/* Free tier / own API key */}
           <div
@@ -356,15 +373,15 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
         </div>
 
         {/* Loading */}
-        {loading && (
+        {isLoading && (
           <div style={{ textAlign: 'center', padding: 40, color: 'var(--ds-muted)' }}>
             <div style={{ fontSize: 32, animation: 'ddtb-pulse 1.5s infinite' }}>🔮</div>
             <p style={{ marginTop: 12 }}>{t.fates}</p>
           </div>
         )}
 
-        {/* Character card */}
-        {character && !loading && (
+        {/* Result card (active tab) */}
+        {result && !isLoading && (
           <div
             style={{
               animation: 'ddtb-fadeIn 0.4s ease',
@@ -386,10 +403,10 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
             >
               <div>
                 <h2 style={{ margin: 0, fontFamily: SERIF, fontSize: 24, color: 'var(--ds-accent)' }}>
-                  {character.name || '—'}
+                  {result.name || '—'}
                 </h2>
                 <p style={{ margin: '4px 0 0', color: 'var(--ds-muted)', fontSize: 14 }}>
-                  {[character.race, character.cls].filter(Boolean).join(' · ')}
+                  {[result.race, result.cls].filter(Boolean).join(' · ')}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -402,68 +419,78 @@ ${SECTION_EMOJI.secret_desire} ${t.sections.secret_desire}: ${character.secret_d
               </div>
             </div>
 
-            {SECTIONS.map((sec) => (
-              <div
-                key={sec}
-                style={{
-                  background: 'var(--ds-raised)',
-                  borderRadius: 10,
-                  padding: 18,
-                  marginBottom: 14,
-                  border: '1px solid var(--ds-line2)',
-                }}
-              >
+            {TAB_FIELDS[activeTab].map((field) => {
+              const sec = field.key;
+              const canRegen = activeTab === 'classic';
+              return (
                 <div
+                  key={sec}
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 10,
+                    background: 'var(--ds-raised)',
+                    borderRadius: 10,
+                    padding: 18,
+                    marginBottom: 14,
+                    border: '1px solid var(--ds-line2)',
                   }}
                 >
-                  <h3
+                  <div
                     style={{
-                      margin: 0,
                       display: 'flex',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      gap: 8,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      letterSpacing: '.06em',
-                      textTransform: 'uppercase',
-                      color: 'var(--ds-accent)',
-                      fontFamily: SANS,
+                      gap: 12,
+                      marginBottom: 10,
                     }}
                   >
-                    <Icon name={SECTION_ICONS[sec]} size={15} /> {t.sections[sec]}
-                  </h3>
-                  <button
-                    onClick={() => regenSection(sec)}
-                    disabled={regenLoading[sec]}
-                    className="ddtb-btn"
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: 6,
-                      border: '1px solid var(--ds-line2)',
-                      background: 'transparent',
-                      color: 'var(--ds-muted)',
-                      cursor: regenLoading[sec] ? 'not-allowed' : 'pointer',
-                      fontSize: 12,
-                      fontFamily: SANS,
-                    }}
-                  >
-                    {regenLoading[sec] ? '…' : t.redo}
-                  </button>
+                    <h3
+                      style={{
+                        margin: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        letterSpacing: '.06em',
+                        textTransform: 'uppercase',
+                        color: 'var(--ds-accent)',
+                        fontFamily: SANS,
+                      }}
+                    >
+                      <Icon name={field.icon} size={15} /> {fieldLabel(activeTab, field, lang)}
+                    </h3>
+                    {canRegen && (
+                      <button
+                        onClick={() => regenSection(sec)}
+                        disabled={regenLoading[sec]}
+                        className="ddtb-btn"
+                        style={{
+                          flex: '0 0 auto',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          border: '1px solid var(--ds-line2)',
+                          background: 'transparent',
+                          color: 'var(--ds-muted)',
+                          cursor: regenLoading[sec] ? 'not-allowed' : 'pointer',
+                          fontSize: 12,
+                          fontFamily: SANS,
+                        }}
+                      >
+                        {regenLoading[sec] ? '…' : t.redo}
+                      </button>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'var(--ds-text)' }}>
+                    {regenLoading[sec] ? (
+                      <span style={{ animation: 'ddtb-pulse 1s infinite', display: 'inline-block' }}>
+                        …
+                      </span>
+                    ) : (
+                      result[sec]
+                    )}
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'var(--ds-text)' }}>
-                  {regenLoading[sec] ? (
-                    <span style={{ animation: 'ddtb-pulse 1s infinite', display: 'inline-block' }}>…</span>
-                  ) : (
-                    character[sec]
-                  )}
-                </p>
-              </div>
-            ))}
+              );
+            })}
 
             <Button
               variant="secondary"
