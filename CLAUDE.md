@@ -44,6 +44,9 @@ Launcher and sidebar rebuild themselves from manifests. See `wiki/Adding-a-Modul
   (`api/generate.js`) and the Vite dev middleware (`api/dev-middleware.js`).
 - `packages/design-system/src/tokens.css` + `theme.jsx` — token vars + ThemeProvider/useTheme.
 - `DESIGN_SYSTEM.md` (root) — authoritative style values.
+- `modules/character-forge/src/forge-tabs.js` — Character Forge tab descriptors (id,
+  server mode, field keys, icons, emojis, ru/en labels). A new lens tab also needs a
+  server mode in `_core.js` (+ `_local-claude.js`) and a `TAB_MODE` entry.
 
 ## Styling rules (non-negotiable)
 
@@ -70,8 +73,10 @@ sends the user's own key via `x-user-api-key` (stored in localStorage
 `402 free_quota_exhausted`; bad user key → `401 invalid_user_key`.
 
 `/api/generate` modes (`_core.js` builds all prompts server-side): `full` /
-`section` → `{ fields }` (Character Forge); `tavern_enliven` (`{ facts, lang }`)
-→ `{ text }` (Tavern Builder read-aloud description). One quota pool for all.
+`section` → `{ fields }` (Character Forge classic tab); `forge_drives` /
+`forge_shadow` → `{ fields }` (Character Forge lens tabs — Drives & Fears / Shadow);
+`tavern_enliven` (`{ facts, lang }`) → `{ text }` (Tavern Builder read-aloud
+description). One quota pool for all.
 
 Local alternative (personal): `LOCAL_CLAUDE=1` in `apps/hub/.env` serves dev
 `/api/generate` via the local Claude Code CLI (subscription auth; quota/BYOK
@@ -111,6 +116,8 @@ Smoke-check in dev (no key needed):
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
 - "Don't touch casually" zones: `frames.js` and character-forge `i18n.js` (10-language UI
   one-liners + ru/en roll tables; `i18n.test.js` guards the shape; prettier-ignored — keep
-  the hand formatting).
+  the hand formatting). Character Forge lens-tab labels (drives/shadow) live in
+  `forge-tabs.js`, ru/en only with en fallback — not in the 10-language `i18n.js` (v1
+  tradeoff; localise there later if needed).
 - Desktop-first: the ~680px module column needs viewport ≳1100px beside the 232px sidebar; narrower clips horizontally — widen before responsive/screenshot checks.
 - **Never `git add -A` / `git add .`** — stage explicit paths (`git add <file>`). A stray SSH key once got swept into a commit this way; keys/secrets are gitignored but don't rely on it.
