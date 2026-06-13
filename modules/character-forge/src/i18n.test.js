@@ -5,7 +5,7 @@ import { RACES, CLASSES, FIRST_NAMES, LAST_NAMES, UI, randL } from './i18n.js';
 // subtly wrong (a missing ru field would surface as "undefined" in an input).
 const POOLS = {
   RACES: { pool: RACES, min: 17 },
-  CLASSES: { pool: CLASSES, min: 15 },
+  CLASSES: { pool: CLASSES, min: 14 },
   FIRST_NAMES: { pool: FIRST_NAMES, min: 26 },
   LAST_NAMES: { pool: LAST_NAMES, min: 24 },
 };
