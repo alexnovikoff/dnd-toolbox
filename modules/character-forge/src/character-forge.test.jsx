@@ -193,6 +193,30 @@ describe('character-forge', () => {
     );
   });
 
+  it('shows a clear button only when a field has text and empties it on click', () => {
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    const nameInput = screen.getByPlaceholderText(UI.ru.namePlaceholder);
+
+    // empty by default → no clear button
+    expect(screen.queryByRole('button', { name: UI.ru.clear })).toBeNull();
+
+    // typing reveals a clear button that empties the field on click
+    fireEvent.change(nameInput, { target: { value: 'Kael' } });
+    expect(nameInput.value).toBe('Kael');
+    fireEvent.click(screen.getByRole('button', { name: UI.ru.clear }));
+    expect(nameInput.value).toBe('');
+
+    // it's per-field — the race clear targets only the race input
+    const raceInput = screen.getByPlaceholderText(UI.ru.racePlaceholder);
+    fireEvent.change(raceInput, { target: { value: 'Tiefling' } });
+    fireEvent.click(screen.getByRole('button', { name: UI.ru.clear }));
+    expect(raceInput.value).toBe('');
+  });
+
   it('rolls dice values from the pool of the selected language', () => {
     render(
       <ThemeProvider>
