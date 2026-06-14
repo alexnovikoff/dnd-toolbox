@@ -36,6 +36,29 @@ function Dice({ onClick, label }) {
   );
 }
 
+function ClearBtn({ onClick, label }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="ddtb-btn"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: 'none',
+        background: 'transparent',
+        color: 'var(--ds-muted)',
+        cursor: 'pointer',
+        padding: 2,
+      }}
+    >
+      <Icon name="close" size={16} />
+    </button>
+  );
+}
+
 const card = {
   background: 'var(--ds-panel)',
   border: '1px solid var(--ds-line2)',
@@ -238,7 +261,12 @@ export default function CharacterForge() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t.namePlaceholder ?? UI.en.namePlaceholder}
-            right={<Dice label={t.name} onClick={rollName} />}
+            right={
+              <>
+                {name && <ClearBtn label={t.clear ?? UI.en.clear} onClick={() => setName('')} />}
+                <Dice label={t.name} onClick={rollName} />
+              </>
+            }
             style={{ marginBottom: 14 }}
           />
           <Field
@@ -247,7 +275,12 @@ export default function CharacterForge() {
             onChange={(e) => setRace(e.target.value)}
             placeholder={t.racePlaceholder ?? UI.en.racePlaceholder}
             options={raceOptions}
-            right={<Dice label={t.race} onClick={rollRace} />}
+            right={
+              <>
+                {race && <ClearBtn label={t.clear ?? UI.en.clear} onClick={() => setRace('')} />}
+                <Dice label={t.race} onClick={rollRace} />
+              </>
+            }
             style={{ marginBottom: 14 }}
           />
           <Field
@@ -256,7 +289,12 @@ export default function CharacterForge() {
             onChange={(e) => setCls(e.target.value)}
             placeholder={t.clsPlaceholder ?? UI.en.clsPlaceholder}
             options={classOptions}
-            right={<Dice label={t.cls} onClick={rollCls} />}
+            right={
+              <>
+                {cls && <ClearBtn label={t.clear ?? UI.en.clear} onClick={() => setCls('')} />}
+                <Dice label={t.cls} onClick={rollCls} />
+              </>
+            }
             style={{ marginBottom: 14 }}
           />
           <Field

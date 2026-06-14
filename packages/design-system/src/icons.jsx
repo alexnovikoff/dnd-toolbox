@@ -72,6 +72,7 @@ export const ICON_PATHS = {
     </g>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  close: <path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5" />,
   grid: (
     <g>
       <rect x="4" y="4" width="6.4" height="6.4" rx="1.2" />
