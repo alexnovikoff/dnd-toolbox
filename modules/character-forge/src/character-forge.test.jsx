@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from '@dnd/design-system';
 import { manifest, Component } from './index.jsx';
-import { UI, RACES, CLASSES, FIRST_NAMES, LAST_NAMES } from './i18n.js';
+import { UI, RACES, CLASSES, LAST_NAMES, firstNamesFor } from './i18n.js';
 import { tabLabel } from './forge-tabs.js';
 
 const FIELDS = {
@@ -205,13 +205,32 @@ describe('character-forge', () => {
 
     fireEvent.click(screen.getByRole('button', { name: UI.ru.name }));
     const [first, ...rest] = screen.getByPlaceholderText(UI.ru.namePlaceholder).value.split(' ');
-    expect(FIRST_NAMES.map((n) => n.ru)).toContain(first);
+    // default gender is male, so the first name comes from the male pool
+    expect(firstNamesFor('male').map((n) => n.ru)).toContain(first);
     expect(LAST_NAMES.map((n) => n.ru)).toContain(rest.join(' '));
 
     // after switching the language the dice roll from the en pool
     setLanguage('en');
     fireEvent.click(screen.getByRole('button', { name: UI.en.race }));
     expect(RACES.map((r) => r.en)).toContain(race.value);
+  });
+
+  it('rolls a first name matching the selected gender', () => {
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    // default gender is male → male pool
+    fireEvent.click(screen.getByRole('button', { name: UI.ru.name }));
+    let first = screen.getByPlaceholderText(UI.ru.namePlaceholder).value.split(' ')[0];
+    expect(firstNamesFor('male').map((n) => n.ru)).toContain(first);
+
+    // switching to female rolls from the female pool (the pools are disjoint)
+    fireEvent.click(screen.getByRole('button', { name: UI.ru.female }));
+    fireEvent.click(screen.getByRole('button', { name: UI.ru.name }));
+    first = screen.getByPlaceholderText(UI.ru.namePlaceholder).value.split(' ')[0];
+    expect(firstNamesFor('female').map((n) => n.ru)).toContain(first);
   });
 
   it('generates the active alternative tab and sends its mode', async () => {

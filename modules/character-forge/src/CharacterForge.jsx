@@ -3,7 +3,7 @@
 // design system, and generation goes through the server proxy (./api.js).
 import { useState, useCallback } from 'react';
 import { Icon, Button, Field, Select, ToggleGroup, SANS, SERIF } from '@dnd/design-system';
-import { UI, LANGUAGES, RACES, CLASSES, FIRST_NAMES, LAST_NAMES, randL, sanitize } from './i18n.js';
+import { UI, LANGUAGES, RACES, CLASSES, LAST_NAMES, randL, firstNamesFor, sanitize } from './i18n.js';
 import {
   generateCharacter,
   generateForge,
@@ -108,7 +108,8 @@ export default function CharacterForge() {
     setKeyDraft('');
   };
 
-  const rollName = () => setName(`${randL(FIRST_NAMES, lang)} ${randL(LAST_NAMES, lang)}`);
+  const rollName = () =>
+    setName(`${randL(firstNamesFor(gender), lang)} ${randL(LAST_NAMES, lang)}`);
   const rollRace = () => setRace(randL(RACES, lang));
   const rollCls = () => setCls(randL(CLASSES, lang));
 

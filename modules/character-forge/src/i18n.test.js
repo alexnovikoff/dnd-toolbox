@@ -1,4 +1,4 @@
-import { RACES, CLASSES, FIRST_NAMES, LAST_NAMES, UI, randL } from './i18n.js';
+import { RACES, CLASSES, FIRST_NAMES, LAST_NAMES, UI, randL, firstNamesFor } from './i18n.js';
 
 // Shape guard for the roll tables: dice rolls and placeholders rely on every
 // entry carrying both locales, and hand-edited bilingual data is easy to get
@@ -6,8 +6,8 @@ import { RACES, CLASSES, FIRST_NAMES, LAST_NAMES, UI, randL } from './i18n.js';
 const POOLS = {
   RACES: { pool: RACES, min: 17 },
   CLASSES: { pool: CLASSES, min: 14 },
-  FIRST_NAMES: { pool: FIRST_NAMES, min: 26 },
-  LAST_NAMES: { pool: LAST_NAMES, min: 24 },
+  FIRST_NAMES: { pool: FIRST_NAMES, min: 130 },
+  LAST_NAMES: { pool: LAST_NAMES, min: 120 },
 };
 
 describe('character-forge roll tables', () => {
@@ -32,6 +32,20 @@ describe('character-forge roll tables', () => {
     for (const { pool, min } of Object.values(POOLS)) {
       expect(pool.length).toBeGreaterThanOrEqual(min);
     }
+  });
+
+  it('tags every first name with a gender and keeps both subsets stocked', () => {
+    for (const e of FIRST_NAMES) expect(['m', 'f']).toContain(e.g);
+    expect(FIRST_NAMES.filter((n) => n.g === 'm').length).toBeGreaterThanOrEqual(40);
+    expect(FIRST_NAMES.filter((n) => n.g === 'f').length).toBeGreaterThanOrEqual(40);
+  });
+
+  it('firstNamesFor filters by gender and falls back to the full pool', () => {
+    expect(firstNamesFor('male').every((n) => n.g === 'm')).toBe(true);
+    expect(firstNamesFor('female').every((n) => n.g === 'f')).toBe(true);
+    expect(firstNamesFor('male').length).toBeGreaterThan(0);
+    expect(firstNamesFor('female').length).toBeGreaterThan(0);
+    expect(firstNamesFor('other')).toBe(FIRST_NAMES);
   });
 
   it('randL rolls from the ru pool and falls back to en for other languages', () => {
