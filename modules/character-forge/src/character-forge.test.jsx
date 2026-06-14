@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from '@dnd/design-system';
 import { manifest, Component } from './index.jsx';
-import { UI, RACES, FIRST_NAMES, LAST_NAMES } from './i18n.js';
+import { UI, RACES, CLASSES, FIRST_NAMES, LAST_NAMES } from './i18n.js';
 import { tabLabel } from './forge-tabs.js';
 
 const FIELDS = {
@@ -46,6 +46,13 @@ function mockFetchByMode(byMode) {
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
+}
+
+// The language switcher is the only <select>; the race/class inputs are now
+// comboboxes too (each carries a <datalist>), so disambiguate by tag.
+function setLanguage(code) {
+  const select = screen.getAllByRole('combobox').find((el) => el.tagName === 'SELECT');
+  fireEvent.change(select, { target: { value: code } });
 }
 
 describe('character-forge', () => {
@@ -153,9 +160,37 @@ describe('character-forge', () => {
     expect(screen.getByPlaceholderText(UI.ru.racePlaceholder)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(UI.ru.clsPlaceholder)).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'en' } });
+    setLanguage('en');
     expect(screen.getByPlaceholderText(UI.en.namePlaceholder)).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(UI.ru.namePlaceholder)).toBeNull();
+  });
+
+  it('offers race and class as editable dropdowns that follow the language', () => {
+    const { container } = render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    const optionsOf = (input) => {
+      const dl = container.querySelector(`datalist[id="${input.getAttribute('list')}"]`);
+      return [...dl.querySelectorAll('option')].map((o) => o.value);
+    };
+    const raceInput = screen.getByPlaceholderText(UI.ru.racePlaceholder);
+    const clsInput = screen.getByPlaceholderText(UI.ru.clsPlaceholder);
+
+    // ru dropdown options by default
+    expect(optionsOf(raceInput)).toEqual(RACES.map((r) => r.ru));
+    expect(optionsOf(clsInput)).toEqual(CLASSES.map((c) => c.ru));
+
+    // free text is still allowed — the input is not constrained to the list
+    fireEvent.change(raceInput, { target: { value: 'Custom Lineage' } });
+    expect(raceInput.value).toBe('Custom Lineage');
+
+    // switching the language relocalizes the dropdown options
+    setLanguage('en');
+    expect(optionsOf(screen.getByPlaceholderText(UI.en.racePlaceholder))).toEqual(
+      RACES.map((r) => r.en)
+    );
   });
 
   it('rolls dice values from the pool of the selected language', () => {
@@ -174,7 +209,7 @@ describe('character-forge', () => {
     expect(LAST_NAMES.map((n) => n.ru)).toContain(rest.join(' '));
 
     // after switching the language the dice roll from the en pool
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'en' } });
+    setLanguage('en');
     fireEvent.click(screen.getByRole('button', { name: UI.en.race }));
     expect(RACES.map((r) => r.en)).toContain(race.value);
   });

@@ -68,6 +68,10 @@ export default function CharacterForge() {
   const [keyDraft, setKeyDraft] = useState('');
 
   const t = UI[lang];
+  // Localized dropdown options for the editable race/class comboboxes — same
+  // locale fallback as randL (the dice). Free text and the dice still work.
+  const raceOptions = RACES.map((r) => r[lang] ?? r.en);
+  const classOptions = CLASSES.map((c) => c[lang] ?? c.en);
   const result = results[activeTab] || null;
   const isLoading = !!loading[activeTab];
   const tabError = error[activeTab] || '';
@@ -241,6 +245,7 @@ export default function CharacterForge() {
             value={race}
             onChange={(e) => setRace(e.target.value)}
             placeholder={t.racePlaceholder ?? UI.en.racePlaceholder}
+            options={raceOptions}
             right={<Dice label={t.race} onClick={rollRace} />}
             style={{ marginBottom: 14 }}
           />
@@ -249,6 +254,7 @@ export default function CharacterForge() {
             value={cls}
             onChange={(e) => setCls(e.target.value)}
             placeholder={t.clsPlaceholder ?? UI.en.clsPlaceholder}
+            options={classOptions}
             right={<Dice label={t.cls} onClick={rollCls} />}
             style={{ marginBottom: 14 }}
           />

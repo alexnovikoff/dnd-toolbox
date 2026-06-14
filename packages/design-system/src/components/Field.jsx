@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { Icon } from '../icons.jsx';
 import { SANS } from '../constants.js';
 
@@ -24,6 +25,8 @@ export const fieldBoxStyle = {
 
 // Field — labeled text input. Optional leading `icon` and trailing `right`
 // adornment (e.g. a dice/randomize button) rendered inside the field border.
+// Pass `options` (array of strings) to turn it into an editable dropdown: a
+// native <datalist> of suggestions, while the input still accepts free text.
 export function Field({
   label,
   value,
@@ -35,7 +38,10 @@ export function Field({
   hint,
   style = {},
   inputProps = {},
+  options,
 }) {
+  const listId = useId();
+  const hasList = Array.isArray(options) && options.length > 0;
   return (
     <div style={style}>
       {label && (
@@ -56,6 +62,7 @@ export function Field({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
+          list={hasList ? listId : undefined}
           style={{
             flex: 1,
             minWidth: 0,
@@ -70,6 +77,13 @@ export function Field({
         />
         {right}
       </div>
+      {hasList && (
+        <datalist id={listId}>
+          {options.map((o) => (
+            <option key={o} value={o} />
+          ))}
+        </datalist>
+      )}
     </div>
   );
 }
