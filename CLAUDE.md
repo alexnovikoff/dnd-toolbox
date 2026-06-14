@@ -46,7 +46,9 @@ Launcher and sidebar rebuild themselves from manifests. See `wiki/Adding-a-Modul
 - `DESIGN_SYSTEM.md` (root) — authoritative style values.
 - `modules/character-forge/src/forge-tabs.js` — Character Forge tab descriptors (id,
   server mode, field keys, icons, emojis, ru/en labels). A new lens tab also needs a
-  server mode in `_core.js` (+ `_local-claude.js`) and a `TAB_MODE` entry.
+  server mode in `_core.js` (+ `_local-claude.js`) and a `TAB_MODE` entry; its field
+  definition object (e.g. `DRIVES_FIELDS`) must map each key to the English question
+  text, which `buildSection` injects into the per-field regen prompt.
 
 ## Styling rules (non-negotiable)
 
@@ -73,10 +75,11 @@ sends the user's own key via `x-user-api-key` (stored in localStorage
 `402 free_quota_exhausted`; bad user key → `401 invalid_user_key`.
 
 `/api/generate` modes (`_core.js` builds all prompts server-side): `full` /
-`section` → `{ fields }` (Character Forge classic tab); `forge_drives` /
-`forge_shadow` → `{ fields }` (Character Forge lens tabs — Drives & Fears / Shadow);
-`tavern_enliven` (`{ facts, lang }`) → `{ text }` (Tavern Builder read-aloud
-description). One quota pool for all.
+`section` → `{ fields }` (Character Forge — classic sections **and** lens field keys,
+validated against `REGEN_KEYS`); `forge_drives` / `forge_shadow` → `{ fields }`
+(Character Forge lens tabs — Drives & Fears / Shadow); `tavern_enliven`
+(`{ facts, lang }`) → `{ text }` (Tavern Builder read-aloud description). One quota
+pool for all.
 
 Local alternative (personal): `LOCAL_CLAUDE=1` in `apps/hub/.env` serves dev
 `/api/generate` via the local Claude Code CLI (subscription auth; quota/BYOK
