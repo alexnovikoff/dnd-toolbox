@@ -68,9 +68,15 @@ export function buildSection(p) {
   const len = LENGTH_SPEC[p.length] || LENGTH_SPEC.normal;
   const sec = p.section;
   const safeCharacter = JSON.stringify(p.character || {}).slice(0, 4000);
+  // Lens-tab fields are keyed cryptically (e.g. "flees"), so prompt by the
+  // field's question; classic sections are self-describing from the key alone.
+  const question = QUESTION_FIELDS[sec];
+  const ask = question
+    ? `Regenerate only the "${sec}" field — the answer to this question about the character: "${question}".`
+    : `Regenerate only the "${sec}" field for this D&D character.`;
   return {
     max_tokens: 400,
-    content: `Regenerate only the "${sec}" field for this D&D character. Respond in ${langName(p.lang)}.${genderNote(p.lang, p.gender)}
+    content: `${ask} Respond in ${langName(p.lang)}.${genderNote(p.lang, p.gender)}
 The field must be ${len} long.
 Character: ${safeCharacter}
 Respond ONLY with JSON: {"${sec}":"new content"}`,
@@ -95,6 +101,11 @@ const SHADOW_FIELDS = {
 };
 export const DRIVES_KEYS = Object.keys(DRIVES_FIELDS);
 export const SHADOW_KEYS = Object.keys(SHADOW_FIELDS);
+
+// All valid single-field regenerate targets: classic sections + lens field
+// keys. buildSection looks up the lens question text from QUESTION_FIELDS.
+const QUESTION_FIELDS = { ...DRIVES_FIELDS, ...SHADOW_FIELDS };
+export const REGEN_KEYS = new Set([...SECTIONS, ...Object.keys(QUESTION_FIELDS)]);
 
 // Shared builder for the lens tabs: same seed/gender/length/language handling
 // as buildFull, but the output is the answers to a fixed set of questions.
@@ -238,7 +249,7 @@ export async function handleGenerate({
   const mode = ['section', 'tavern_enliven', 'forge_drives', 'forge_shadow'].includes(body.mode)
     ? body.mode
     : 'full';
-  if (mode === 'section' && !SECTIONS.includes(body.section)) {
+  if (mode === 'section' && !REGEN_KEYS.has(body.section)) {
     return { status: 400, json: { error: 'Invalid section.' } };
   }
   if (mode === 'tavern_enliven' && !String(body.facts || '').trim()) {

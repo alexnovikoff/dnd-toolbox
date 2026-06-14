@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from '@dnd/design-system';
 import { manifest, Component } from './index.jsx';
 import { UI, RACES, FIRST_NAMES, LAST_NAMES } from './i18n.js';
@@ -245,5 +245,37 @@ describe('character-forge', () => {
     // the classic result was for the old character — it has been dropped
     fireEvent.click(screen.getByRole('button', { name: tabLabel('classic', 'ru') }));
     expect(screen.queryByText(FIELDS.backstory)).toBeNull();
+  });
+
+  it('regenerates a single field on a lens tab via mode "section"', async () => {
+    const NEW_FLEES = 'A reinvented flight from an older shame.';
+    const fetchMock = vi.fn(async (url, opts) => {
+      const body = JSON.parse(opts.body);
+      if (body.mode === 'section') {
+        return { ok: true, status: 200, json: async () => ({ fields: { [body.section]: NEW_FLEES } }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ fields: DRIVES, remaining: 9 }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    fireEvent.change(screen.getByPlaceholderText(UI.ru.namePlaceholder), {
+      target: { value: 'Kael' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('drives', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(DRIVES.flees)).toBeInTheDocument();
+
+    // click the ↺ button inside the "flees" field card
+    const card = screen.getByText(DRIVES.flees).closest('div');
+    fireEvent.click(within(card).getByRole('button', { name: UI.ru.redo }));
+    expect(await screen.findByText(NEW_FLEES)).toBeInTheDocument();
+
+    // the regen request carried the lens field key as the section
+    const sectionCall = fetchMock.mock.calls.find((c) => JSON.parse(c[1].body).mode === 'section');
+    expect(JSON.parse(sectionCall[1].body).section).toBe('flees');
   });
 });
