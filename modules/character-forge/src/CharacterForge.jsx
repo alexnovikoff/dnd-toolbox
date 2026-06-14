@@ -139,10 +139,11 @@ export default function CharacterForge() {
     setLoading((p) => ({ ...p, [tab]: false }));
   }, [name, race, cls, vibe, lang, gender, length, t, handleApiError, activeTab, seedSig]);
 
-  // Per-section ↺ regenerate — classic tab only (v1).
+  // Per-field ↺ regenerate for the active tab (works on every tab).
   const regenSection = useCallback(
     async (sec) => {
-      const current = results.classic;
+      const tab = activeTab;
+      const current = results[tab];
       if (!current) return;
       setRegenLoading((p) => ({ ...p, [sec]: true }));
       try {
@@ -153,17 +154,17 @@ export default function CharacterForge() {
           length,
           lang,
         });
-        setResults((p) => ({ ...p, classic: { ...p.classic, ...data.fields } }));
+        setResults((p) => ({ ...p, [tab]: { ...p[tab], ...data.fields } }));
         if (data.remaining != null) setRemaining(data.remaining);
       } catch (e) {
         if (e?.code === 'free_quota_exhausted' || e?.code === 'invalid_user_key') {
-          handleApiError(e, 'classic');
+          handleApiError(e, tab);
         }
         /* otherwise keep previous content */
       }
       setRegenLoading((p) => ({ ...p, [sec]: false }));
     },
-    [results.classic, lang, gender, length, handleApiError]
+    [results, activeTab, lang, gender, length, handleApiError]
   );
 
   const copyAll = useCallback(async () => {
@@ -429,7 +430,6 @@ export default function CharacterForge() {
 
             {TAB_FIELDS[activeTab].map((field) => {
               const sec = field.key;
-              const canRegen = activeTab === 'classic';
               return (
                 <div
                   key={sec}
@@ -466,26 +466,24 @@ export default function CharacterForge() {
                     >
                       <Icon name={field.icon} size={15} /> {fieldLabel(activeTab, field, lang)}
                     </h3>
-                    {canRegen && (
-                      <button
-                        onClick={() => regenSection(sec)}
-                        disabled={regenLoading[sec]}
-                        className="ddtb-btn"
-                        style={{
-                          flex: '0 0 auto',
-                          padding: '4px 10px',
-                          borderRadius: 6,
-                          border: '1px solid var(--ds-line2)',
-                          background: 'transparent',
-                          color: 'var(--ds-muted)',
-                          cursor: regenLoading[sec] ? 'not-allowed' : 'pointer',
-                          fontSize: 12,
-                          fontFamily: SANS,
-                        }}
-                      >
-                        {regenLoading[sec] ? '…' : t.redo}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => regenSection(sec)}
+                      disabled={regenLoading[sec]}
+                      className="ddtb-btn"
+                      style={{
+                        flex: '0 0 auto',
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        border: '1px solid var(--ds-line2)',
+                        background: 'transparent',
+                        color: 'var(--ds-muted)',
+                        cursor: regenLoading[sec] ? 'not-allowed' : 'pointer',
+                        fontSize: 12,
+                        fontFamily: SANS,
+                      }}
+                    >
+                      {regenLoading[sec] ? '…' : t.redo}
+                    </button>
                   </div>
                   <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'var(--ds-text)' }}>
                     {regenLoading[sec] ? (

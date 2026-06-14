@@ -10,7 +10,7 @@ import {
   buildDrives,
   buildShadow,
   extractFields,
-  SECTIONS,
+  REGEN_KEYS,
 } from './_core.js';
 
 const TIMEOUT_MS = 90_000;
@@ -76,7 +76,7 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
   const mode = ['section', 'tavern_enliven', 'forge_drives', 'forge_shadow'].includes(body.mode)
     ? body.mode
     : 'full';
-  if (mode === 'section' && !SECTIONS.includes(body.section)) {
+  if (mode === 'section' && !REGEN_KEYS.has(body.section)) {
     return { status: 400, json: { error: 'Invalid section.' } };
   }
   if (mode === 'tavern_enliven' && !String(body.facts || '').trim()) {

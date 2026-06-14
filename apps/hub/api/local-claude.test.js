@@ -106,6 +106,44 @@ describe('local Claude Code mode', () => {
     expect(runner).not.toHaveBeenCalled();
   });
 
+  it('regenerates a single lens (drives) field, injecting its English question', async () => {
+    let seen;
+    const r = await handleGenerateLocal({
+      body: { mode: 'section', section: 'flees', character: FIELDS, lang: 'en' },
+      runClaude: async (prompt) => {
+        seen = prompt;
+        return {
+          stdout: envelope({ result: JSON.stringify({ flees: 'Toward a horizon that keeps receding.' }) }),
+          stderr: '',
+          code: 0,
+        };
+      },
+    });
+    expect(r.status).toBe(200);
+    expect(r.json.fields).toEqual({ flees: 'Toward a horizon that keeps receding.' });
+    // the bare key 'flees' is meaningless to the model — the prompt must carry the question
+    expect(seen).toContain('flees');
+    expect(seen).toContain('running toward');
+  });
+
+  it('regenerates a single lens (shadow) field by key', async () => {
+    let seen;
+    const r = await handleGenerateLocal({
+      body: { mode: 'section', section: 'line', character: FIELDS, lang: 'en' },
+      runClaude: async (prompt) => {
+        seen = prompt;
+        return {
+          stdout: envelope({ result: JSON.stringify({ line: 'Never raise a hand against the helpless.' }) }),
+          stderr: '',
+          code: 0,
+        };
+      },
+    });
+    expect(r.status).toBe(200);
+    expect(r.json.fields).toEqual({ line: 'Never raise a hand against the helpless.' });
+    expect(seen).toContain('sworn never to cross');
+  });
+
   it('serves tavern_enliven as plain text wrapped in { text }', async () => {
     let seen;
     const r = await handleGenerateLocal({
