@@ -7,8 +7,8 @@
 // formatted i18n.js stays untouched.
 import { SECTIONS, SECTION_ICONS, SECTION_EMOJI, UI } from './i18n.js';
 
-// Tab order: the existing generator first, then the lenses, then the worksheet.
-export const TAB_IDS = ['classic', 'drives', 'shadow', 'tables'];
+// Tab order: classic first, then the worksheet, then the two lenses.
+export const TAB_IDS = ['classic', 'tables', 'shadow', 'drives'];
 
 // Each tab maps to a server generation mode (see _core.js mode whitelist).
 export const TAB_MODE = {
