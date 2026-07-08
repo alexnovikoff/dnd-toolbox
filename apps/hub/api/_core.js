@@ -29,6 +29,13 @@ const LENGTH_SPEC = {
   normal: '2-3 sentences',
   long: '4-5 sentences',
 };
+// Compressed spec for the 15-field worksheet tab (forge_tables): the default
+// spec at 'long' (4-5 sentences x 15 fields) would overrun TIMEOUT_MS.
+const TABLES_LENGTH_SPEC = {
+  short: 'a short phrase (3-8 words)',
+  normal: 'exactly 1 sentence',
+  long: '2-3 sentences',
+};
 export const SECTIONS = ['backstory', 'personality', 'goals', 'flaws', 'secret_desire'];
 
 const langName = (code) => LANG_NAMES[code] || 'English';
@@ -65,7 +72,10 @@ Be vivid, specific, avoid clichés.`,
 }
 
 export function buildSection(p) {
-  const len = LENGTH_SPEC[p.length] || LENGTH_SPEC.normal;
+  // Tables fields are generated with the compressed spec, so a regenerated
+  // field must match its siblings' length, not the default spec.
+  const lengthSpec = TABLES_KEY_SET.has(p.section) ? TABLES_LENGTH_SPEC : LENGTH_SPEC;
+  const len = lengthSpec[p.length] || lengthSpec.normal;
   const sec = p.section;
   const safeCharacter = JSON.stringify(p.character || {}).slice(0, 4000);
   // Lens-tab fields are keyed cryptically (e.g. "flees"), so prompt by the
@@ -99,18 +109,53 @@ const SHADOW_FIELDS = {
   feared_self: 'The version of themselves the character is afraid of becoming.',
   realization: 'The moment the character realized they were wrong.',
 };
+// «Персонаж в трёх таблицах» worksheet: 15 named qualities in 3 tables.
+// Grouping (quality/presentation/layers) is client-side only (forge-tabs.js).
+const TABLES_FIELDS = {
+  alias:
+    "The character's name and how they are addressed. Keep the given name from the seed exactly (invent a fitting one only if it is unknown) and add a nickname or the way others address them.",
+  focus:
+    "The character's main theme (e.g. fire mage, berserker, psionic, King Midas, Iron Man, a spirit).",
+  shtick:
+    'The thing the character will do in any situation (e.g. liar, painter, touch-me-not, boor, knight).',
+  motivation:
+    "What drives the character — usually an idea, not an action: not 'catching bandits' but 'justice'.",
+  conscious_desire:
+    'A short- or long-term goal — an action, phenomenon or event the character wants to achieve (catching bandits, revenge, repaying a debt).',
+  unconscious_desire:
+    'What the character NEEDS instead of what they want; it may contradict their conscious desire and even their motivation.',
+  weakness:
+    'The flaw that will ruin everything — ground for conflicts and chemistry within the party; it should drive the plot without spoiling the game for anyone.',
+  eye_catcher:
+    'The trait the character will be remembered by and described to others (e.g. a minotaur, one-eyed, a bone hand, a face tattoo).',
+  appearance:
+    'Exactly three appearance details noticed after the first impression (e.g. a broken horn, a nose ring, a battle-axe).',
+  worldview:
+    'The prism through which the character sees the world: what they notice first and what everything comes down to in their picture of the world.',
+  behavior:
+    "The character's first action when they appear on a scene — ideally one that involves the other player characters.",
+  in_public:
+    'How the character is perceived in society: the rumors about them, what they are known for.',
+  with_friends:
+    'How the character behaves among those truly close to them (not the whole party counts as close).',
+  alone: 'How the character behaves alone with themselves and their thoughts.',
+  in_secret:
+    'The deepest layer of the personality — it may be a secret even from the character themselves; it surfaces in the most desperate, tense or joyful moments, and it underlies how they never outwardly behave.',
+};
 export const DRIVES_KEYS = Object.keys(DRIVES_FIELDS);
 export const SHADOW_KEYS = Object.keys(SHADOW_FIELDS);
+export const TABLES_KEYS = Object.keys(TABLES_FIELDS);
+const TABLES_KEY_SET = new Set(TABLES_KEYS);
 
 // All valid single-field regenerate targets: classic sections + lens field
 // keys. buildSection looks up the lens question text from QUESTION_FIELDS.
-const QUESTION_FIELDS = { ...DRIVES_FIELDS, ...SHADOW_FIELDS };
+const QUESTION_FIELDS = { ...DRIVES_FIELDS, ...SHADOW_FIELDS, ...TABLES_FIELDS };
 export const REGEN_KEYS = new Set([...SECTIONS, ...Object.keys(QUESTION_FIELDS)]);
 
 // Shared builder for the lens tabs: same seed/gender/length/language handling
 // as buildFull, but the output is the answers to a fixed set of questions.
-function buildQuestions(p, fields, maxTokens) {
-  const len = LENGTH_SPEC[p.length] || LENGTH_SPEC.normal;
+function buildQuestions(p, fields, maxTokens, lengthSpec = LENGTH_SPEC) {
+  const len = lengthSpec[p.length] || lengthSpec.normal;
   const keys = Object.keys(fields);
   const questions = keys.map((k) => `- "${k}": ${fields[k]}`).join('\n');
   const shape = `{${keys.map((k) => `"${k}":"..."`).join(',')}}`;
@@ -136,6 +181,7 @@ Be vivid, specific, avoid clichés.`,
 
 export const buildDrives = (p) => buildQuestions(p, DRIVES_FIELDS, 600);
 export const buildShadow = (p) => buildQuestions(p, SHADOW_FIELDS, 1200);
+export const buildTables = (p) => buildQuestions(p, TABLES_FIELDS, 2000, TABLES_LENGTH_SPEC);
 
 // Multi-line tavern facts from the client: strip injection-prone characters
 // per line but keep the line structure the prompt template expects.
@@ -246,7 +292,13 @@ export async function handleGenerate({
     }
   }
 
-  const mode = ['section', 'tavern_enliven', 'forge_drives', 'forge_shadow'].includes(body.mode)
+  const mode = [
+    'section',
+    'tavern_enliven',
+    'forge_drives',
+    'forge_shadow',
+    'forge_tables',
+  ].includes(body.mode)
     ? body.mode
     : 'full';
   if (mode === 'section' && !REGEN_KEYS.has(body.section)) {
@@ -265,7 +317,9 @@ export async function handleGenerate({
           ? buildDrives(body)
           : mode === 'forge_shadow'
             ? buildShadow(body)
-            : buildFull(body);
+            : mode === 'forge_tables'
+              ? buildTables(body)
+              : buildFull(body);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

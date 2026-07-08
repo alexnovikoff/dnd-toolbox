@@ -1,9 +1,18 @@
 // CharacterForge.jsx — multilingual D&D character generator.
 // Ported from the standalone dnd-character-generator; all chrome now uses the
 // design system, and generation goes through the server proxy (./api.js).
-import { useState, useCallback } from 'react';
+import { Fragment, useState, useCallback } from 'react';
 import { Icon, Button, Field, Select, ToggleGroup, SANS, SERIF } from '@dnd/design-system';
-import { UI, LANGUAGES, RACES, CLASSES, LAST_NAMES, randL, firstNamesFor, sanitize } from './i18n.js';
+import {
+  UI,
+  LANGUAGES,
+  RACES,
+  CLASSES,
+  LAST_NAMES,
+  randL,
+  firstNamesFor,
+  sanitize,
+} from './i18n.js';
 import {
   generateCharacter,
   generateForge,
@@ -11,7 +20,7 @@ import {
   getUserKey,
   setUserKey,
 } from './api.js';
-import { TAB_IDS, TAB_MODE, TAB_FIELDS, tabLabel, fieldLabel } from './forge-tabs.js';
+import { TAB_IDS, TAB_MODE, TAB_FIELDS, tabLabel, fieldLabel, groupLabel } from './forge-tabs.js';
 
 function Dice({ onClick, label }) {
   return (
@@ -200,7 +209,13 @@ export default function CharacterForge() {
     if (!current) return;
     const header = `${current.name || '?'} — ${current.race || '?'} ${current.cls || '?'}`;
     const body = TAB_FIELDS[activeTab]
-      .map((f) => `${f.emoji} ${fieldLabel(activeTab, f, lang)}: ${current[f.key]}`)
+      .map((f, i, fields) => {
+        const line = `${f.emoji} ${fieldLabel(activeTab, f, lang)}: ${current[f.key]}`;
+        // Worksheet tabs: a group header line before the group's first field
+        // (blank-line separated, except right after the name header).
+        if (!f.group || f.group === fields[i - 1]?.group) return line;
+        return `${i > 0 ? '\n' : ''}${groupLabel(activeTab, f.group, lang)}\n${line}`;
+      })
       .join('\n');
     const txt = `${header}\n\n${body}`;
     try {
@@ -243,7 +258,9 @@ export default function CharacterForge() {
           >
             {t.title}
           </h1>
-          <p style={{ margin: '8px 0 14px', color: 'var(--ds-muted)', fontSize: 14 }}>{t.subtitle}</p>
+          <p style={{ margin: '8px 0 14px', color: 'var(--ds-muted)', fontSize: 14 }}>
+            {t.subtitle}
+          </p>
           <div style={{ display: 'inline-flex', minWidth: 200 }}>
             <Select
               value={lang}
@@ -337,12 +354,18 @@ export default function CharacterForge() {
             >
               {t.randomAll}
             </Button>
-            <Button onClick={generate} disabled={isLoading} style={{ flex: 1, fontSize: 15, padding: '12px 24px' }}>
+            <Button
+              onClick={generate}
+              disabled={isLoading}
+              style={{ flex: 1, fontSize: 15, padding: '12px 24px' }}
+            >
               {isLoading ? t.generating : t.generate}
             </Button>
           </div>
           {tabError && (
-            <p style={{ margin: '12px 0 0', color: 'var(--ds-danger)', fontSize: 13 }}>{tabError}</p>
+            <p style={{ margin: '12px 0 0', color: 'var(--ds-danger)', fontSize: 13 }}>
+              {tabError}
+            </p>
           )}
 
           {/* Free tier / own API key */}
@@ -359,7 +382,11 @@ export default function CharacterForge() {
             }}
           >
             <span style={{ fontSize: 12, color: 'var(--ds-faint)' }}>
-              {userKey ? t.usingOwnKey : remaining != null ? t.freeLeft.replace('{n}', remaining) : ''}
+              {userKey
+                ? t.usingOwnKey
+                : remaining != null
+                  ? t.freeLeft.replace('{n}', remaining)
+                  : ''}
             </span>
             <button
               type="button"
@@ -392,11 +419,19 @@ export default function CharacterForge() {
                   autoComplete="off"
                   style={KEY_INPUT}
                 />
-                <Button onClick={saveKey} disabled={!keyDraft.trim()} style={{ padding: '9px 16px', fontSize: 13 }}>
+                <Button
+                  onClick={saveKey}
+                  disabled={!keyDraft.trim()}
+                  style={{ padding: '9px 16px', fontSize: 13 }}
+                >
                   {t.save}
                 </Button>
                 {userKey && (
-                  <Button variant="secondary" onClick={clearKey} style={{ padding: '9px 14px', fontSize: 13 }}>
+                  <Button
+                    variant="secondary"
+                    onClick={clearKey}
+                    style={{ padding: '9px 14px', fontSize: 13 }}
+                  >
                     {t.clearKey}
                   </Button>
                 )}
@@ -456,7 +491,9 @@ export default function CharacterForge() {
               }}
             >
               <div>
-                <h2 style={{ margin: 0, fontFamily: SERIF, fontSize: 24, color: 'var(--ds-accent)' }}>
+                <h2
+                  style={{ margin: 0, fontFamily: SERIF, fontSize: 24, color: 'var(--ds-accent)' }}
+                >
                   {result.name || '—'}
                 </h2>
                 <p style={{ margin: '4px 0 0', color: 'var(--ds-muted)', fontSize: 14 }}>
@@ -473,73 +510,86 @@ export default function CharacterForge() {
               </div>
             </div>
 
-            {TAB_FIELDS[activeTab].map((field) => {
+            {TAB_FIELDS[activeTab].map((field, i, fields) => {
               const sec = field.key;
+              // Worksheet tabs: heading when the group changes; ungrouped
+              // tabs (no `group` on fields) render exactly as before.
+              const startsGroup = field.group && field.group !== fields[i - 1]?.group;
               return (
-                <div
-                  key={sec}
-                  style={{
-                    background: 'var(--ds-raised)',
-                    borderRadius: 10,
-                    padding: 18,
-                    marginBottom: 14,
-                    border: '1px solid var(--ds-line2)',
-                  }}
-                >
+                <Fragment key={sec}>
+                  {startsGroup && (
+                    <h3 style={{ ...GROUP_HEADING, marginTop: i === 0 ? 0 : 24 }}>
+                      {groupLabel(activeTab, field.group, lang)}
+                    </h3>
+                  )}
                   <div
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 12,
-                      marginBottom: 10,
+                      background: 'var(--ds-raised)',
+                      borderRadius: 10,
+                      padding: 18,
+                      marginBottom: 14,
+                      border: '1px solid var(--ds-line2)',
                     }}
                   >
-                    <h3
+                    <div
                       style={{
-                        margin: 0,
                         display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: 8,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        letterSpacing: '.06em',
-                        textTransform: 'uppercase',
-                        color: 'var(--ds-accent)',
-                        fontFamily: SANS,
+                        gap: 12,
+                        marginBottom: 10,
                       }}
                     >
-                      <Icon name={field.icon} size={15} /> {fieldLabel(activeTab, field, lang)}
-                    </h3>
-                    <button
-                      onClick={() => regenSection(sec)}
-                      disabled={regenLoading[sec]}
-                      className="ddtb-btn"
-                      style={{
-                        flex: '0 0 auto',
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        border: '1px solid var(--ds-line2)',
-                        background: 'transparent',
-                        color: 'var(--ds-muted)',
-                        cursor: regenLoading[sec] ? 'not-allowed' : 'pointer',
-                        fontSize: 12,
-                        fontFamily: SANS,
-                      }}
+                      <h3
+                        style={{
+                          margin: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: '.06em',
+                          textTransform: 'uppercase',
+                          color: 'var(--ds-accent)',
+                          fontFamily: SANS,
+                        }}
+                      >
+                        <Icon name={field.icon} size={15} /> {fieldLabel(activeTab, field, lang)}
+                      </h3>
+                      <button
+                        onClick={() => regenSection(sec)}
+                        disabled={regenLoading[sec]}
+                        className="ddtb-btn"
+                        style={{
+                          flex: '0 0 auto',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          border: '1px solid var(--ds-line2)',
+                          background: 'transparent',
+                          color: 'var(--ds-muted)',
+                          cursor: regenLoading[sec] ? 'not-allowed' : 'pointer',
+                          fontSize: 12,
+                          fontFamily: SANS,
+                        }}
+                      >
+                        {regenLoading[sec] ? '…' : t.redo}
+                      </button>
+                    </div>
+                    <p
+                      style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'var(--ds-text)' }}
                     >
-                      {regenLoading[sec] ? '…' : t.redo}
-                    </button>
+                      {regenLoading[sec] ? (
+                        <span
+                          style={{ animation: 'ddtb-pulse 1s infinite', display: 'inline-block' }}
+                        >
+                          …
+                        </span>
+                      ) : (
+                        result[sec]
+                      )}
+                    </p>
                   </div>
-                  <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: 'var(--ds-text)' }}>
-                    {regenLoading[sec] ? (
-                      <span style={{ animation: 'ddtb-pulse 1s infinite', display: 'inline-block' }}>
-                        …
-                      </span>
-                    ) : (
-                      result[sec]
-                    )}
-                  </p>
-                </div>
+                </Fragment>
               );
             })}
 
@@ -571,6 +621,18 @@ const LABEL = {
   fontWeight: 700,
   marginBottom: 7,
   display: 'block',
+};
+
+// Group heading inside the result card (worksheet tabs) — DESIGN_SYSTEM.md §5
+// section heading: serif 600. Neutral text color: accent stays on the chrome
+// and the field labels.
+const GROUP_HEADING = {
+  margin: '24px 0 12px',
+  fontFamily: SERIF,
+  fontSize: 17,
+  fontWeight: 600,
+  letterSpacing: '.02em',
+  color: 'var(--ds-text)',
 };
 
 const KEY_TOGGLE = {

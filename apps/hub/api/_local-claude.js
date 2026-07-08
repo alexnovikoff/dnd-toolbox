@@ -9,6 +9,7 @@ import {
   buildTavernEnliven,
   buildDrives,
   buildShadow,
+  buildTables,
   extractFields,
   REGEN_KEYS,
 } from './_core.js';
@@ -73,7 +74,13 @@ function defaultRunClaude(prompt) {
 // Local-mode handler: same validation and response shapes as handleGenerate,
 // but no quota/BYOK and no `remaining` field (it's the owner's machine).
 export async function handleGenerateLocal({ body = {}, runClaude = defaultRunClaude } = {}) {
-  const mode = ['section', 'tavern_enliven', 'forge_drives', 'forge_shadow'].includes(body.mode)
+  const mode = [
+    'section',
+    'tavern_enliven',
+    'forge_drives',
+    'forge_shadow',
+    'forge_tables',
+  ].includes(body.mode)
     ? body.mode
     : 'full';
   if (mode === 'section' && !REGEN_KEYS.has(body.section)) {
@@ -91,7 +98,9 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
           ? buildDrives(body)
           : mode === 'forge_shadow'
             ? buildShadow(body)
-            : buildFull(body);
+            : mode === 'forge_tables'
+              ? buildTables(body)
+              : buildFull(body);
 
   let run;
   try {
