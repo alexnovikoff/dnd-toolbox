@@ -2,7 +2,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from '@dnd/design-system';
 import { manifest, Component } from './index.jsx';
 import { UI, RACES, CLASSES, LAST_NAMES, firstNamesFor } from './i18n.js';
-import { tabLabel } from './forge-tabs.js';
+import { tabLabel, groupLabel, TAB_IDS, TAB_MODE, TAB_FIELDS } from './forge-tabs.js';
 
 const FIELDS = {
   backstory: 'A quiet life upended by fire.',
@@ -17,6 +17,25 @@ const DRIVES = {
   flees: 'Runs toward a redemption that keeps receding.',
   lie: 'Believes mercy is a debt others owe.',
   loss: 'The last person who still calls them by name.',
+};
+
+// Distinct answers for the "tables" worksheet tab (mode forge_tables).
+const TABLES = {
+  alias: 'Kael «Ember» Duskmantle.',
+  focus: 'Fire mage of the last hearth.',
+  shtick: 'Lies even when the truth is safer.',
+  motivation: 'Warmth must never be rationed.',
+  conscious_desire: 'Recover the stolen brazier of his order.',
+  unconscious_desire: 'To be forgiven for the fire he set.',
+  weakness: 'Cannot walk past anything left burning.',
+  eye_catcher: 'Soot-black handprints seared into his cloak.',
+  appearance: 'Cracked amber eyes, singed cuffs, a cold iron ring.',
+  worldview: 'Every hearth is a promise someone made.',
+  behavior: 'Relights every lamp in the room, uninvited.',
+  in_public: 'Known as the arsonist the temple pardoned.',
+  with_friends: 'Quietly mends their gear while they sleep.',
+  alone: 'Counts the sparks he owes and to whom.',
+  in_secret: 'Hopes the fire will one day answer back.',
 };
 
 function mockFetchOnce() {
@@ -115,9 +134,7 @@ describe('character-forge', () => {
     fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
 
     // localized quota message + the key input appear
-    expect(
-      await screen.findByText(/Бесплатные генерации закончились/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Бесплатные генерации закончились/)).toBeInTheDocument();
     expect(screen.getByPlaceholderText('sk-ant-…')).toBeInTheDocument();
   });
 
@@ -330,7 +347,11 @@ describe('character-forge', () => {
     const fetchMock = vi.fn(async (url, opts) => {
       const body = JSON.parse(opts.body);
       if (body.mode === 'section') {
-        return { ok: true, status: 200, json: async () => ({ fields: { [body.section]: NEW_FLEES } }) };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ fields: { [body.section]: NEW_FLEES } }),
+        };
       }
       return { ok: true, status: 200, json: async () => ({ fields: DRIVES, remaining: 9 }) };
     });
@@ -355,5 +376,132 @@ describe('character-forge', () => {
     // the regen request carried the lens field key as the section
     const sectionCall = fetchMock.mock.calls.find((c) => JSON.parse(c[1].body).mode === 'section');
     expect(JSON.parse(sectionCall[1].body).section).toBe('flees');
+  });
+
+  it('describes the tables tab: 15 grouped fields wired to mode forge_tables', () => {
+    expect(TAB_IDS).toContain('tables');
+    expect(TAB_MODE.tables).toBe('forge_tables');
+    expect(tabLabel('tables', 'ru')).toBe('Три таблицы');
+    expect(tabLabel('tables', 'en')).toBe('Three Tables');
+
+    const fields = TAB_FIELDS.tables;
+    // worksheet order is part of the method — pin it
+    expect(fields.map((f) => f.key)).toEqual([
+      'alias',
+      'focus',
+      'shtick',
+      'motivation',
+      'conscious_desire',
+      'unconscious_desire',
+      'weakness',
+      'eye_catcher',
+      'appearance',
+      'worldview',
+      'behavior',
+      'in_public',
+      'with_friends',
+      'alone',
+      'in_secret',
+    ]);
+    // three contiguous groups (heading renders on group change), full descriptors
+    expect(fields.map((f) => f.group)).toEqual([
+      ...Array(7).fill('quality'),
+      ...Array(4).fill('presentation'),
+      ...Array(4).fill('layers'),
+    ]);
+    for (const f of fields) {
+      expect(f.icon).toBeTruthy();
+      expect(f.emoji).toBeTruthy();
+      expect(f.ru).toBeTruthy();
+      expect(f.en).toBeTruthy();
+    }
+    for (const g of ['quality', 'presentation', 'layers']) {
+      expect(groupLabel('tables', g, 'ru')).toMatch(/^Таблица \d/);
+      expect(groupLabel('tables', g, 'en')).toMatch(/^Table \d/);
+    }
+    // tabs without groups keep an empty heading
+    expect(groupLabel('classic', 'quality', 'ru')).toBe('');
+  });
+
+  it('generates the tables tab via mode forge_tables and renders group headings', async () => {
+    const fetchMock = mockFetchByMode({ forge_tables: TABLES });
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    fireEvent.change(screen.getByPlaceholderText(UI.ru.namePlaceholder), {
+      target: { value: 'Kael' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('tables', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+
+    expect(await screen.findByText(TABLES.alias)).toBeInTheDocument();
+    expect(screen.getByText(TABLES.in_secret)).toBeInTheDocument();
+    // one serif heading per group, in the active locale
+    for (const g of ['quality', 'presentation', 'layers']) {
+      expect(screen.getByText(groupLabel('tables', g, 'ru'))).toBeInTheDocument();
+    }
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).mode).toBe('forge_tables');
+  });
+
+  it('regenerates a single tables field via mode "section"', async () => {
+    const NEW_FOCUS = 'Storm herald of a drowned coast.';
+    const fetchMock = vi.fn(async (url, opts) => {
+      const body = JSON.parse(opts.body);
+      if (body.mode === 'section') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ fields: { [body.section]: NEW_FOCUS } }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({ fields: TABLES, remaining: 9 }) };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    fireEvent.change(screen.getByPlaceholderText(UI.ru.namePlaceholder), {
+      target: { value: 'Kael' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('tables', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(TABLES.focus)).toBeInTheDocument();
+
+    // click the ↺ button inside the "focus" field card
+    const card = screen.getByText(TABLES.focus).closest('div');
+    fireEvent.click(within(card).getByRole('button', { name: UI.ru.redo }));
+    expect(await screen.findByText(NEW_FOCUS)).toBeInTheDocument();
+
+    const sectionCall = fetchMock.mock.calls.find((c) => JSON.parse(c[1].body).mode === 'section');
+    expect(JSON.parse(sectionCall[1].body).section).toBe('focus');
+  });
+
+  it('copy-all on the tables tab includes group header lines', async () => {
+    mockFetchByMode({ forge_tables: TABLES });
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+    fireEvent.change(screen.getByPlaceholderText(UI.ru.namePlaceholder), {
+      target: { value: 'Kael' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: tabLabel('tables', 'ru') }));
+    fireEvent.click(screen.getByRole('button', { name: /Создать персонажа/ }));
+    expect(await screen.findByText(TABLES.alias)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: UI.ru.copyAll }));
+    expect(await screen.findByText(UI.ru.copied)).toBeInTheDocument();
+    const txt = writeText.mock.calls[0][0];
+    // the first group follows the name header; later groups get a blank line
+    expect(txt).toContain(`\n\n${groupLabel('tables', 'quality', 'ru')}\n`);
+    expect(txt).toContain(`\n\n${groupLabel('tables', 'presentation', 'ru')}\n`);
+    expect(txt).toContain(`📛 Имя и прозвище: ${TABLES.alias}`);
   });
 });

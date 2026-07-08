@@ -48,7 +48,9 @@ Launcher and sidebar rebuild themselves from manifests. See `wiki/Adding-a-Modul
   server mode, field keys, icons, emojis, ru/en labels). A new lens tab also needs a
   server mode in `_core.js` (+ `_local-claude.js`) and a `TAB_MODE` entry; its field
   definition object (e.g. `DRIVES_FIELDS`) must map each key to the English question
-  text, which `buildSection` injects into the per-field regen prompt.
+  text, which `buildSection` injects into the per-field regen prompt. Worksheet-style
+  tabs (e.g. `tables`) additionally give each field a `group` key + a `TAB_GROUP_LABELS`
+  entry — the result card and copy-all render group headings via `groupLabel`.
 
 ## Styling rules (non-negotiable)
 
@@ -76,10 +78,11 @@ sends the user's own key via `x-user-api-key` (stored in localStorage
 
 `/api/generate` modes (`_core.js` builds all prompts server-side): `full` /
 `section` → `{ fields }` (Character Forge — classic sections **and** lens field keys,
-validated against `REGEN_KEYS`); `forge_drives` / `forge_shadow` → `{ fields }`
-(Character Forge lens tabs — Drives & Fears / Shadow); `tavern_enliven`
-(`{ facts, lang }`) → `{ text }` (Tavern Builder read-aloud description). One quota
-pool for all.
+validated against `REGEN_KEYS`); `forge_drives` / `forge_shadow` / `forge_tables` →
+`{ fields }` (Character Forge lens tabs — Drives & Fears / Shadow / «Три таблицы»
+worksheet; the tables tab uses a compressed length spec so 15 fields fit the 30s
+timeout); `tavern_enliven` (`{ facts, lang }`) → `{ text }` (Tavern Builder
+read-aloud description). One quota pool for all.
 
 Local alternative (personal): `LOCAL_CLAUDE=1` in `apps/hub/.env` serves dev
 `/api/generate` via the local Claude Code CLI (subscription auth; quota/BYOK
@@ -119,7 +122,7 @@ Smoke-check in dev (no key needed):
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
 - "Don't touch casually" zones: `frames.js` and character-forge `i18n.js` (10-language UI
   one-liners + ru/en roll tables; `i18n.test.js` guards the shape; prettier-ignored — keep
-  the hand formatting). Character Forge lens-tab labels (drives/shadow) live in
+  the hand formatting). Character Forge lens-tab labels (drives/shadow/tables) live in
   `forge-tabs.js`, ru/en only with en fallback — not in the 10-language `i18n.js` (v1
   tradeoff; localise there later if needed).
 - Desktop-first: the ~680px module column needs viewport ≳1100px beside the 232px sidebar; narrower clips horizontally — widen before responsive/screenshot checks.

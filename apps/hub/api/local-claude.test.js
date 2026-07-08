@@ -113,7 +113,9 @@ describe('local Claude Code mode', () => {
       runClaude: async (prompt) => {
         seen = prompt;
         return {
-          stdout: envelope({ result: JSON.stringify({ flees: 'Toward a horizon that keeps receding.' }) }),
+          stdout: envelope({
+            result: JSON.stringify({ flees: 'Toward a horizon that keeps receding.' }),
+          }),
           stderr: '',
           code: 0,
         };
@@ -133,7 +135,9 @@ describe('local Claude Code mode', () => {
       runClaude: async (prompt) => {
         seen = prompt;
         return {
-          stdout: envelope({ result: JSON.stringify({ line: 'Never raise a hand against the helpless.' }) }),
+          stdout: envelope({
+            result: JSON.stringify({ line: 'Never raise a hand against the helpless.' }),
+          }),
           stderr: '',
           code: 0,
         };
@@ -178,5 +182,45 @@ describe('local Claude Code mode', () => {
     expect(r.status).toBe(400);
     expect(r.json.error).toBe('Invalid request.');
     expect(runner).not.toHaveBeenCalled();
+  });
+
+  it('serves forge_tables and injects the worksheet questions into the prompt', async () => {
+    let seen;
+    const r = await handleGenerateLocal({
+      body: { mode: 'forge_tables', name: 'Kael', lang: 'en' },
+      runClaude: async (prompt) => {
+        seen = prompt;
+        return {
+          stdout: envelope({ result: JSON.stringify({ alias: 'Kael «Ember»' }) }),
+          stderr: '',
+          code: 0,
+        };
+      },
+    });
+    expect(r.status).toBe(200);
+    expect(r.json.fields).toEqual({ alias: 'Kael «Ember»' });
+    // the seed name must survive, and the alias question must pin it in place
+    expect(seen).toContain('Kael');
+    expect(seen).toContain('Keep the given name');
+    expect(seen).toContain('"in_secret"');
+  });
+
+  it('regenerates a tables field with the compressed length spec', async () => {
+    let seen;
+    const r = await handleGenerateLocal({
+      body: { mode: 'section', section: 'focus', character: {}, length: 'long', lang: 'en' },
+      runClaude: async (prompt) => {
+        seen = prompt;
+        return {
+          stdout: envelope({ result: JSON.stringify({ focus: 'Storm herald' }) }),
+          stderr: '',
+          code: 0,
+        };
+      },
+    });
+    expect(r.status).toBe(200);
+    expect(seen).toContain('main theme'); // the question is injected, not the bare key
+    expect(seen).toContain('2-3 sentences'); // TABLES_LENGTH_SPEC long, not the default
+    expect(seen).not.toContain('4-5 sentences');
   });
 });
