@@ -6,7 +6,12 @@
 // logged, never stored.
 import { FREE_LIMIT } from './_quota.js';
 
-const MODEL = 'claude-sonnet-4-6';
+// Sonnet 5: 33% cheaper than 4.6 at the same tier. Sonnet 5 runs adaptive
+// thinking by default (unlike 4.6, which needed it opted in) — these are
+// short single-shot completions with no benefit from thinking, so it's
+// pinned off explicitly to avoid silently regaining the cost as thinking
+// output tokens.
+const MODEL = 'claude-sonnet-5';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
 const TIMEOUT_MS = 30000;
@@ -55,6 +60,12 @@ export function buildFull(p) {
   const len = LENGTH_SPEC[p.length] || LENGTH_SPEC.normal;
   return {
     max_tokens: 1000,
+    schema: {
+      type: 'object',
+      properties: Object.fromEntries(SECTIONS.map((k) => [k, { type: 'string' }])),
+      required: SECTIONS,
+      additionalProperties: false,
+    },
     content: `You are a creative D&D character designer. Generate a rich, original character profile. Respond entirely in ${langName(p.lang)}.
 
 Character seed:
@@ -86,6 +97,12 @@ export function buildSection(p) {
     : `Regenerate only the "${sec}" field for this D&D character.`;
   return {
     max_tokens: 400,
+    schema: {
+      type: 'object',
+      properties: { [sec]: { type: 'string' } },
+      required: [sec],
+      additionalProperties: false,
+    },
     content: `${ask} Respond in ${langName(p.lang)}.${genderNote(p.lang, p.gender)}
 The field must be ${len} long.
 Character: ${safeCharacter}
@@ -161,6 +178,12 @@ function buildQuestions(p, fields, maxTokens, lengthSpec = LENGTH_SPEC) {
   const shape = `{${keys.map((k) => `"${k}":"..."`).join(',')}}`;
   return {
     max_tokens: maxTokens,
+    schema: {
+      type: 'object',
+      properties: Object.fromEntries(keys.map((k) => [k, { type: 'string' }])),
+      required: keys,
+      additionalProperties: false,
+    },
     content: `You are a creative D&D character designer. For the character below, answer each question with a vivid, specific, original insight. Respond entirely in ${langName(p.lang)}.
 
 Character seed:
@@ -335,6 +358,11 @@ export async function handleGenerate({
       body: JSON.stringify({
         model: MODEL,
         max_tokens: spec.max_tokens,
+        thinking: { type: 'disabled' },
+        // JSON-shaped modes carry a schema; tavern_enliven (plain prose) doesn't.
+        ...(spec.schema
+          ? { output_config: { format: { type: 'json_schema', schema: spec.schema } } }
+          : {}),
         messages: [{ role: 'user', content: spec.content }],
       }),
       signal: controller.signal,
