@@ -5,8 +5,28 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Icon, Slider, Field, Button, useTheme, SANS } from '@dnd/design-system';
 import { frameDefs } from './frames.js';
+import { getFrameMask } from './frame-mask.js';
 
 const S = 512;
+
+// Runs `paint` on an empty canvas of size `s`, limiting what it draws to where the
+// frame shows it: the silhouette of a PNG frame (`frameImg`), otherwise the canvas
+// circle that built-in frames fill exactly.
+function paintInsideFrame(ctx, s, frameImg, paint) {
+  const mask = frameImg ? getFrameMask(frameImg, s) : null;
+  ctx.save();
+  if (!mask) {
+    ctx.beginPath();
+    ctx.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2);
+    ctx.clip();
+  }
+  paint();
+  if (mask) {
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(mask, 0, 0);
+  }
+  ctx.restore();
+}
 
 function FrameThumb({ frame, size }) {
   const ref = useRef(null);
@@ -64,8 +84,9 @@ export default function TokenCreator() {
 
   const allFrames = frameDefs.concat(customFrames);
   const getFrame = (i) => (i < frameDefs.length ? frameDefs[i] : customFrames[i - frameDefs.length]);
-  const applyFrame = (c, s, i) => {
-    const f = getFrame(i);
+  // The frame on show: a just-loaded PNG previews before it joins the collection.
+  const shownFrame = () => (pendingFrame ? { img: pendingFrame } : getFrame(activeFrame));
+  const applyFrame = (c, s, f) => {
     if (!f) return;
     if (f.fn) f.fn(c, s);
     else c.drawImage(f.img, 0, 0, s, s);
@@ -76,28 +97,31 @@ export default function TokenCreator() {
     if (!cv) return;
     const ctx = cv.getContext('2d');
     if (!ctx) return;
+    const frame = shownFrame();
     ctx.clearRect(0, 0, S, S);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2);
-    ctx.clip();
-    if (charImg) {
-      const sc = scale / 100,
-        w = charImg.naturalWidth * sc,
-        h = charImg.naturalHeight * sc;
-      ctx.drawImage(charImg, S / 2 - w / 2 + posRef.current.x, S / 2 - h / 2 + posRef.current.y, w, h);
-    } else {
-      ctx.fillStyle = palette.raised;
-      ctx.fillRect(0, 0, S, S);
-      ctx.fillStyle = palette.faint;
-      ctx.font = '500 22px "Public Sans", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Загрузите портрет', S / 2, S / 2);
-    }
-    ctx.restore();
-    if (pendingFrame) ctx.drawImage(pendingFrame, 0, 0, S, S);
-    else applyFrame(ctx, S, activeFrame);
+    paintInsideFrame(ctx, S, frame?.img, () => {
+      if (charImg) {
+        const sc = scale / 100,
+          w = charImg.naturalWidth * sc,
+          h = charImg.naturalHeight * sc;
+        ctx.drawImage(
+          charImg,
+          S / 2 - w / 2 + posRef.current.x,
+          S / 2 - h / 2 + posRef.current.y,
+          w,
+          h
+        );
+      } else {
+        ctx.fillStyle = palette.raised;
+        ctx.fillRect(0, 0, S, S);
+        ctx.fillStyle = palette.faint;
+        ctx.font = '500 22px "Public Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Загрузите портрет', S / 2, S / 2);
+      }
+    });
+    applyFrame(ctx, S, frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [charImg, scale, activeFrame, pendingFrame, customFrames, palette.raised, palette.faint]);
 
@@ -176,25 +200,23 @@ export default function TokenCreator() {
     const exp = document.createElement('canvas');
     exp.width = exp.height = exportSize;
     const ectx = exp.getContext('2d'),
-      ratio = exportSize / S;
-    ectx.save();
-    ectx.beginPath();
-    ectx.arc(exportSize / 2, exportSize / 2, exportSize / 2, 0, Math.PI * 2);
-    ectx.clip();
-    if (charImg) {
-      const sc = scale / 100,
-        w = charImg.naturalWidth * sc * ratio,
-        h = charImg.naturalHeight * sc * ratio;
-      ectx.drawImage(
-        charImg,
-        exportSize / 2 - w / 2 + posRef.current.x * ratio,
-        exportSize / 2 - h / 2 + posRef.current.y * ratio,
-        w,
-        h
-      );
-    }
-    ectx.restore();
-    applyFrame(ectx, exportSize, activeFrame);
+      ratio = exportSize / S,
+      frame = shownFrame();
+    paintInsideFrame(ectx, exportSize, frame?.img, () => {
+      if (charImg) {
+        const sc = scale / 100,
+          w = charImg.naturalWidth * sc * ratio,
+          h = charImg.naturalHeight * sc * ratio;
+        ectx.drawImage(
+          charImg,
+          exportSize / 2 - w / 2 + posRef.current.x * ratio,
+          exportSize / 2 - h / 2 + posRef.current.y * ratio,
+          w,
+          h
+        );
+      }
+    });
+    applyFrame(ectx, exportSize, frame);
     exp.toBlob((blob) => {
       const url = URL.createObjectURL(blob),
         a = document.createElement('a');

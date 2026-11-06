@@ -29,8 +29,11 @@ Circular character tokens with procedural frames for Foundry VTT and the table
 - **Portrait:** drag-and-drop or click to upload; mouse-wheel to zoom; drag on the
   canvas to reposition.
 - **Custom frames:** upload a transparent PNG, name it, and it joins the grid
-  (rename/delete supported).
-- **Export:** PNG at 256 / 512 / 1024 px, circular-clipped, with a custom filename.
+  (rename/delete supported). The portrait is limited to the frame's outer
+  silhouette, read from its alpha channel (`src/frame-mask.js`), so it never shows
+  on the transparent background around the frame.
+- **Export:** PNG at 256 / 512 / 1024 px, clipped to the frame (circular for
+  built-in frames), with a custom filename.
 - **Styling:** UI chrome uses the design system; the `<canvas>` reads raw colors
   from `useTheme().palette` (canvas can't consume CSS variables).
 
