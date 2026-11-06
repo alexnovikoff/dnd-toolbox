@@ -33,7 +33,8 @@ Circular character tokens with procedural frames for Foundry VTT and the table
   silhouette, read from its alpha channel (`src/frame-mask.js`), so it never shows
   on the transparent background around the frame.
 - **Export:** PNG at 256 / 512 / 1024 px, clipped to the frame (circular for
-  built-in frames), with a custom filename.
+  built-in frames). The filename is prefilled from the portrait's (`hero.png` →
+  `hero_token`) and can be edited; loading another portrait replaces it.
 - **Styling:** UI chrome uses the design system; the `<canvas>` reads raw colors
   from `useTheme().palette` (canvas can't consume CSS variables).
 

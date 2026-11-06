@@ -9,6 +9,9 @@ import { getFrameMask } from './frame-mask.js';
 
 const S = 512;
 
+// "hero.v2.png" → "hero.v2_token"; export adds its own extension.
+const tokenFileName = (portraitFile) => portraitFile.name.replace(/\.[^.]+$/, '') + '_token';
+
 // Runs `paint` on an empty canvas of size `s`, limiting what it draws to where the
 // frame shows it: the silhouette of a PNG frame (`frameImg`), otherwise the canvas
 // circle that built-in frames fill exactly.
@@ -181,6 +184,7 @@ export default function TokenCreator() {
           const fit = Math.min(S / im.naturalWidth, S / im.naturalHeight) * 0.9;
           setCharImg(im);
           setScale(Math.round(fit * 100));
+          setFileName(tokenFileName(file));
         }
       };
       im.src = e.target.result;
