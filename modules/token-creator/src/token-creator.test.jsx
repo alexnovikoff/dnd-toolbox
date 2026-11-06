@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@dnd/design-system';
 import { manifest, Component } from './index.jsx';
 import { frameDefs } from './frames.js';
@@ -107,6 +107,66 @@ describe('token-creator export', () => {
     const callsOnExport = builtIn.mock.calls.filter(([ctx]) => ctx === exported);
     expect(callsOnExport.map(([, size]) => size)).toEqual([512]);
     expect(exported.drawn.map((d) => d.source)).not.toContain(frame);
+  });
+});
+
+describe('token-creator file name', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'Image',
+      class {
+        naturalWidth = 512;
+        naturalHeight = 512;
+        set src(url) {
+          if (url) queueMicrotask(() => this.onload());
+        }
+      }
+    );
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const dropOn = (zone, name) => {
+    const file = new File(['img'], name, { type: 'image/png' });
+    fireEvent.drop(screen.getByText(zone), { dataTransfer: { files: [file] } });
+  };
+  const fileNameField = () => screen.getByPlaceholderText('token');
+
+  it.each([
+    ['hero.png', 'hero_token'],
+    ['hero.v2.jpg', 'hero.v2_token'],
+    ['hero', 'hero_token'],
+    ['Гном воин.webp', 'Гном воин_token'],
+  ])('names the token after the portrait file %s', async (name, expected) => {
+    dropOn(/Перетащите изображение/, name);
+    await waitFor(() => expect(fileNameField()).toHaveValue(expected));
+  });
+
+  it('follows the portrait when it is replaced', async () => {
+    dropOn(/Перетащите изображение/, 'first.png');
+    await screen.findByText(/Изображение загружено/);
+    dropOn(/Изображение загружено/, 'second.png');
+    await waitFor(() => expect(fileNameField()).toHaveValue('second_token'));
+  });
+
+  it('keeps a name typed after the portrait loaded', async () => {
+    dropOn(/Перетащите изображение/, 'hero.png');
+    await screen.findByText(/Изображение загружено/);
+    fireEvent.change(fileNameField(), { target: { value: 'boss' } });
+    expect(fileNameField()).toHaveValue('boss');
+  });
+
+  it('does not rename the token when a frame is loaded', async () => {
+    dropOn(/Перетащите PNG-рамку/, 'frame.png');
+    await screen.findByText('+ Добавить');
+    expect(fileNameField()).toHaveValue('');
   });
 });
 
