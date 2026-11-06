@@ -1,6 +1,114 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from '@dnd/design-system';
 import { manifest, Component } from './index.jsx';
+import { frameDefs } from './frames.js';
+
+// jsdom has no canvas: this context records what gets drawn, and in which composite
+// mode. Pixel reads come back fully opaque, which gives any frame image a mask.
+function recordingContext() {
+  const saved = [];
+  const ctx = {
+    globalCompositeOperation: 'source-over',
+    drawn: [],
+    save: () => saved.push(ctx.globalCompositeOperation),
+    restore: () => {
+      ctx.globalCompositeOperation = saved.pop();
+    },
+    drawImage: (source, ...at) => ctx.drawn.push({ source, at, op: ctx.globalCompositeOperation }),
+    getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4).fill(255) }),
+    createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+  };
+  return new Proxy(ctx, {
+    get: (target, key) => (key in target ? target[key] : () => ({ addColorStop() {} })),
+  });
+}
+
+describe('token-creator export', () => {
+  let exported; // context of the canvas handed to toBlob
+  let lastImage;
+
+  beforeEach(() => {
+    const contexts = new WeakMap();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function () {
+      if (!contexts.has(this)) contexts.set(this, recordingContext());
+      return contexts.get(this);
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function () {
+      exported = contexts.get(this);
+    });
+    vi.stubGlobal(
+      'Image',
+      class {
+        naturalWidth = 512;
+        naturalHeight = 512;
+        constructor() {
+          lastImage = this;
+        }
+        set src(url) {
+          if (url) queueMicrotask(() => this.onload());
+        }
+      }
+    );
+    render(
+      <ThemeProvider>
+        <Component />
+      </ThemeProvider>
+    );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const loadFrame = async () => {
+    const file = new File(['png'], 'frame.png', { type: 'image/png' });
+    fireEvent.drop(screen.getByText(/Перетащите PNG-рамку/), { dataTransfer: { files: [file] } });
+    await screen.findByText('+ Добавить');
+    return lastImage;
+  };
+  const exportPng = () => fireEvent.click(screen.getByText(/Экспорт PNG/));
+
+  it('exports the frame on preview before it joins the collection', async () => {
+    const frame = await loadFrame();
+    exportPng();
+    expect(exported.drawn).toContainEqual({
+      source: frame,
+      at: [0, 0, 512, 512],
+      op: 'source-over',
+    });
+  });
+
+  it('limits the exported portrait to that frame, drawing the frame on top', async () => {
+    const frame = await loadFrame();
+    exportPng();
+    const { drawn } = exported;
+    const maskAt = drawn.findIndex((d) => d.op === 'destination-in');
+    expect(drawn[maskAt]?.source).toBeInstanceOf(HTMLCanvasElement);
+    expect(drawn.findIndex((d) => d.source === frame)).toBeGreaterThan(maskAt);
+  });
+
+  it('exports a frame added to the collection', async () => {
+    const frame = await loadFrame();
+    fireEvent.click(screen.getByText('+ Добавить'));
+    exportPng();
+    expect(exported.drawn).toContainEqual({
+      source: frame,
+      at: [0, 0, 512, 512],
+      op: 'source-over',
+    });
+  });
+
+  it('goes back to the active frame when the loaded one is cancelled', async () => {
+    const builtIn = vi.spyOn(frameDefs[0], 'fn');
+    const frame = await loadFrame();
+    fireEvent.click(screen.getByText('Отмена'));
+    exportPng();
+    const callsOnExport = builtIn.mock.calls.filter(([ctx]) => ctx === exported);
+    expect(callsOnExport.map(([, size]) => size)).toEqual([512]);
+    expect(exported.drawn.map((d) => d.source)).not.toContain(frame);
+  });
+});
 
 describe('token-creator', () => {
   it('exposes a well-formed manifest', () => {
