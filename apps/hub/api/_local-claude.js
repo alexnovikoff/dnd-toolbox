@@ -10,6 +10,8 @@ import {
   buildDrives,
   buildShadow,
   buildTables,
+  buildNpcDeepen,
+  isValidNpcDeepen,
   extractFields,
   REGEN_KEYS,
 } from './_core.js';
@@ -80,6 +82,7 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
     'forge_drives',
     'forge_shadow',
     'forge_tables',
+    'npc_deepen',
   ].includes(body.mode)
     ? body.mode
     : 'full';
@@ -87,6 +90,9 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
     return { status: 400, json: { error: 'Invalid section.' } };
   }
   if (mode === 'tavern_enliven' && !String(body.facts || '').trim()) {
+    return { status: 400, json: { error: 'Invalid request.' } };
+  }
+  if (mode === 'npc_deepen' && !isValidNpcDeepen(body)) {
     return { status: 400, json: { error: 'Invalid request.' } };
   }
   const spec =
@@ -100,7 +106,9 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
             ? buildShadow(body)
             : mode === 'forge_tables'
               ? buildTables(body)
-              : buildFull(body);
+              : mode === 'npc_deepen'
+                ? buildNpcDeepen(body)
+                : buildFull(body);
 
   let run;
   try {

@@ -3,15 +3,6 @@
 // real module ships, add it to registry.js and remove its placeholder here.
 export const COMING_SOON = [
   {
-    id: 'npc',
-    name: 'NPC Generator',
-    description: 'Имена, внешность, черты и мотивы',
-    group: 'creation',
-    icon: 'npc',
-    accent: '#8a6cc0',
-    status: 'soon',
-  },
-  {
     id: 'loot',
     name: 'Loot Generator',
     description: 'Клады и награды, сбалансированные по CR',

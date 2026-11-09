@@ -71,8 +71,47 @@ A bilingual tavern generator for the GM (tag `#b07a3f`, icon `tavern`, group
 - **State** (`params`, `lang`, `locks`, `tavern`) persists in localStorage under
   `ddtb_tavern`.
 
+## NPC Generator (`@dnd/npc-generator`)
+
+A bilingual NPC generator for the GM (tag `#8a6cc0`, icon `npc`, group
+`creation`). The main roll is instant and free; AI is an optional extra step.
+
+- **Table-driven main roll:** `src/tables/*.js` (original RU/EN content, hand
+  formatted, `.prettierignore`) + `src/engine.js` (pure logic). `data.test.js`
+  guards the table shape and the size of every tone/occupation pool.
+- **Three levels, one NPC:** every field is rolled up front and the level only
+  decides how much is shown, so a passer-by the players latch onto grows into a
+  key NPC without a reroll.
+  - _Прохожий:_ who, name, occupation, detail, manner, attitude, current want.
+  - _Постоянный:_ adds what they know, secret (hidden until clicked), leverage,
+    background, hook.
+  - _Ключевой:_ adds what happens if the party stays out of it, what they can
+    offer, what works in conversation, allies and enemies, stock SRD stat block.
+- **Filters, all optional:** occupation circle, race, gender, tone. They apply
+  to the next roll and never reroll the current NPC.
+- **Fit over randomness:** entries can be tagged by tone (`t`) and occupation
+  circle (`c`). `pickFit` only draws entries that fit and favours the specific
+  ones, which is what keeps table-rolled NPCs coherent.
+- **Russian grammar:** `{m|f}` markers (`Служил{|а}`, `сборщи{к|ца}`) resolve at
+  display time from the NPC's gender. Write new entries in the present tense
+  or mark every gendered word.
+- **Locks + rerolls:** per field. A new race or gender also renames the NPC and
+  a new occupation moves the stat block, unless those fields are locked.
+- **AI step («Углубить с ИИ»):** the button appears only once an NPC exists and
+  every run goes through a Да/Нет question with an optional hint. Via the server
+  proxy (`mode: "npc_deepen"` → `{ fields }`). It ties the draft into one person
+  and adds a spoken line; locked fields, identity, attitude and the stat block
+  are left alone. AI text is an overlay stored per field with its language, so
+  «Вернуть таблицы» restores the draft and other languages show the table text.
+  Quota/BYOK rules are the same as Character Forge. See [[API Proxy|API-Proxy]].
+- **Crowd:** several passers-by per click; open any of them on the card.
+- **My NPCs:** saved list with GM notes and plain-text copy. A saved NPC and the
+  one on the card are the same person: edits reach both.
+- **State** (`params`, `lang`, `locks`, `view`, `crowdSize`, `npc`, `crowd`,
+  `saved`) persists in localStorage under `ddtb_npc`.
+
 ## Coming soon
 
-Placeholders in `apps/hub/src/comingSoon.js` (NPC Generator, Loot Generator,
-City Forge) render on the launcher and sidebar. Build one by following
+Placeholders in `apps/hub/src/comingSoon.js` (Loot Generator, City Forge) render
+on the launcher and sidebar. Build one by following
 [[Adding a Module|Adding-a-Module]] and removing its placeholder.
