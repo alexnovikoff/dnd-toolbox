@@ -47,6 +47,7 @@ function ToneGrid({ value, onChange }) {
             className="ddtb-btn"
             onClick={() => onChange(o.id)}
             style={{
+              gridColumn: o.id === 'any' ? '1 / -1' : undefined,
               padding: '7px 0',
               borderRadius: 8,
               cursor: 'pointer',

@@ -9,6 +9,7 @@ import {
   FIELD_KEYS,
   aiTargets,
   applyAi,
+  completeNpc,
   crowd,
   generate,
   npcFacts,
@@ -16,7 +17,7 @@ import {
 } from './engine.js';
 import { deepenNpc } from './api.js';
 import { NpcParams } from './controls.jsx';
-import { NpcCard } from './card.jsx';
+import { CrowdBar, NpcCard } from './card.jsx';
 import { CrowdList, EmptyCard, SavedList } from './lists.jsx';
 import { COPY } from './copy.js';
 
@@ -81,10 +82,13 @@ function useNpcState() {
     }
   }, [params, lang, locks, view, crowdSize, npc, people, library]);
 
-  // A saved NPC is the same person as the one on the card, so edits reach both.
+  // A saved or crowd NPC is the same person as the one on the card, so edits
+  // reach every copy and going back to the list never loses them.
   function updateNpc(next) {
+    const replace = (list) => list.map((item) => (item.id === next.id ? next : item));
     setNpc(next);
-    setLibrary((list) => list.map((item) => (item.id === next.id ? next : item)));
+    setLibrary(replace);
+    setPeople(replace);
   }
 
   function setParam(key, value) {
@@ -96,6 +100,12 @@ function useNpcState() {
   function setLevel(level) {
     setParam('level', level);
     if (npc) updateNpc({ ...npc, level });
+  }
+
+  // The full form of a crowd NPC: nothing already on the card changes.
+  function makeFull() {
+    updateNpc(completeNpc(npc, params, locks));
+    setParam('level', 'key');
   }
 
   function regenerate() {
@@ -136,6 +146,7 @@ function useNpcState() {
         item && item.id === target.id ? applyAi(item, data.fields, targets, lang) : item;
       setNpc(merge);
       setLibrary((list) => list.map(merge));
+      setPeople((list) => list.map(merge));
     } catch (e) {
       setAiError({ id: target.id, text: aiErrorText(e, lang) });
     } finally {
@@ -156,6 +167,7 @@ function useNpcState() {
     aiError,
     remaining,
     isSaved: !!npc && library.some((item) => item.id === npc.id),
+    fromCrowd: !!npc && people.some((item) => item.id === npc.id),
     setParam,
     setLevel,
     setLang,
@@ -164,6 +176,7 @@ function useNpcState() {
     regenerate,
     open,
     deepen,
+    makeFull,
     reroll: (key) => updateNpc(rerollField(npc, key, params, locks)),
     toggleLock: (key) => setLocks((l) => ({ ...l, [key]: !l[key] })),
     revertAi: () => updateNpc({ ...npc, ai: null }),
@@ -226,7 +239,10 @@ export default function NpcGenerator() {
           </div>
           {st.view === 'npc' &&
             (st.npc ? (
-              <NpcCard key={st.npc.id} st={st} />
+              <>
+                {st.fromCrowd && <CrowdBar st={st} />}
+                <NpcCard key={st.npc.id} st={st} />
+              </>
             ) : (
               <EmptyCard title={t.emptyTitle} text={t.emptyText} />
             ))}

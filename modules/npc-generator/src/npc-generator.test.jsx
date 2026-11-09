@@ -50,6 +50,19 @@ function seedState(overrides = {}) {
   );
 }
 
+// One passer-by waiting in the crowd list.
+const CROWD_NPC = { ...NPC, id: 'crowd-1', level: 'passerby' };
+
+function seedCrowd(overrides = {}) {
+  seedState({
+    params: { level: 'passerby', occ: 'any', race: 'any', gender: 'any', tone: 'any' },
+    npc: null,
+    crowd: [CROWD_NPC],
+    view: 'crowd',
+    ...overrides,
+  });
+}
+
 function renderModule() {
   return render(
     <ThemeProvider>
@@ -379,14 +392,12 @@ describe('npc-generator', () => {
       expect(screen.getByText(/written in another language/)).toBeInTheDocument();
     });
 
-    it('hides the secret until asked', () => {
+    it('shows the secret right away', () => {
       seedState();
       renderModule();
-      expect(screen.queryByText('Живёт чужой жизнью')).not.toBeInTheDocument();
-      click('Показать');
       expect(screen.getByText('Живёт чужой жизнью')).toBeInTheDocument();
-      click('Скрыть');
-      expect(screen.queryByText('Живёт чужой жизнью')).not.toBeInTheDocument();
+      expect(queryButton('Показать')).not.toBeInTheDocument();
+      expect(queryButton('Скрыть')).not.toBeInTheDocument();
     });
 
     it('rerolls exactly one field', () => {
@@ -417,6 +428,13 @@ describe('npc-generator', () => {
       expect(JSON.parse(localStorage.getItem('ddtb_npc')).params.tone).toBe('grim');
     });
 
+    it('offers a mystic tone', () => {
+      seedState();
+      renderModule();
+      click('Мистический');
+      expect(JSON.parse(localStorage.getItem('ddtb_npc')).params.tone).toBe('mystic');
+    });
+
     it('copies the card as text', async () => {
       const writeText = vi.fn(async () => {});
       vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
@@ -445,6 +463,111 @@ describe('npc-generator', () => {
       expect(screen.getByText('Примета')).toBeInTheDocument();
       expect(button(AI)).toBeInTheDocument();
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('goes back to the list from an opened NPC', () => {
+      seedCrowd();
+      renderModule();
+      click('Открыть');
+      expect(screen.getByText('Примета')).toBeInTheDocument();
+      click('Назад');
+      expect(button('Открыть')).toBeInTheDocument();
+      expect(screen.queryByText('Примета')).not.toBeInTheDocument();
+    });
+
+    it('offers «Назад» only for an NPC from the crowd', () => {
+      seedState();
+      renderModule();
+      expect(queryButton('Назад')).not.toBeInTheDocument();
+    });
+
+    it('drops «Назад» once a new NPC is rolled', () => {
+      seedCrowd();
+      renderModule();
+      click('Открыть');
+      click(/Создать NPC/);
+      expect(queryButton('Назад')).not.toBeInTheDocument();
+    });
+
+    it('keeps edits made on the card after going back', () => {
+      seedCrowd();
+      renderModule();
+      click('Открыть');
+      click('Перебросить: Примета');
+      click('Назад');
+      expect(screen.queryByText('Печать на шнурке')).not.toBeInTheDocument();
+      click('Открыть');
+      expect(screen.queryByText('Печать на шнурке')).not.toBeInTheDocument();
+    });
+
+    it('keeps the AI text after going back', async () => {
+      stubReply();
+      seedCrowd();
+      renderModule();
+      click('Открыть');
+      await confirmAi();
+      click('Назад');
+      click('Открыть');
+      expect(screen.getByText(/Плати или проваливай/)).toBeInTheDocument();
+    });
+
+    it('builds the full form from a crowd NPC and keeps what was filled', () => {
+      const fetchMock = stubReply();
+      seedCrowd();
+      renderModule();
+      click('Открыть');
+      expect(screen.queryByText('Зацепка')).not.toBeInTheDocument();
+      click('Сгенерировать полноценного');
+      for (const label of ['Знает', 'Секрет', 'Зацепка', 'Если не вмешаться', 'В бою']) {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      }
+      for (const kept of [
+        'Бранд Дубовик',
+        'сборщик пошлины',
+        'Печать на шнурке',
+        'Считает монеты вслух',
+        'Настороженный: отвечает коротко',
+        'Закрыть дыру в кассе',
+      ]) {
+        expect(screen.getByText(kept)).toBeInTheDocument();
+      }
+      expect(queryButton('Сгенерировать полноценного')).not.toBeInTheDocument();
+      expect(button('Назад')).toBeInTheDocument();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('remembers the full form in the crowd and on the level selector', () => {
+      seedCrowd();
+      renderModule();
+      click('Открыть');
+      click('Сгенерировать полноценного');
+      const stored = JSON.parse(localStorage.getItem('ddtb_npc'));
+      expect(stored.crowd[0].level).toBe('key');
+      expect(stored.params.level).toBe('key');
+      click('Назад');
+      expect(screen.getByText(/сборщик пошлины · Ключевой/)).toBeInTheDocument();
+    });
+
+    it('keeps locked fields when building the full form', () => {
+      seedCrowd({ locks: { secret: true } });
+      renderModule();
+      click('Открыть');
+      click('Сгенерировать полноценного');
+      expect(screen.getByText('Живёт чужой жизнью')).toBeInTheDocument();
+    });
+
+    it('offers the full form only for a crowd NPC', () => {
+      seedState({ npc: CROWD_NPC, crowd: [] });
+      renderModule();
+      expect(queryButton('Сгенерировать полноценного')).not.toBeInTheDocument();
+    });
+
+    it('does not offer the full form when the NPC already has it', () => {
+      seedCrowd({ crowd: [{ ...CROWD_NPC, level: 'key' }] });
+      renderModule();
+      click('Открыть');
+      expect(queryButton('Сгенерировать полноценного')).not.toBeInTheDocument();
+      expect(button('Назад')).toBeInTheDocument();
     });
   });
 

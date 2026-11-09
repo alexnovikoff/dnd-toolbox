@@ -18,6 +18,7 @@ export const NPC_DATA = {
     { id: 'plain', ru: 'Обыденный', en: 'Everyday' },
     { id: 'grim', ru: 'Мрачный', en: 'Grim' },
     { id: 'comic', ru: 'Комичный', en: 'Comic' },
+    { id: 'mystic', ru: 'Мистический', en: 'Mystic' },
   ],
   genders: {
     m: { ru: 'мужчина', en: 'male' },

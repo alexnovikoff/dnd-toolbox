@@ -5,6 +5,7 @@ import {
   ageText,
   aiTargets,
   applyAi,
+  completeNpc,
   crowd,
   fieldText,
   generate,
@@ -253,6 +254,66 @@ describe('crowd', () => {
       expect(n.who.race.id).toBe('gnome');
       expect(n.occupation.c).toBe('road');
     });
+  });
+});
+
+describe('completeNpc', () => {
+  const TAGGED_DEEP = ['secret', 'background', 'hook', 'plan'];
+  const passerby = (params = P) => crowd(params, 1)[0];
+
+  it('raises the NPC to the full form and keeps its identity', () => {
+    const npc = passerby();
+    const full = completeNpc(npc, P);
+    expect(full.level).toBe('key');
+    expect(full.id).toBe(npc.id);
+  });
+
+  it('keeps every field already shown', () => {
+    const npc = passerby();
+    const full = completeNpc(npc, P);
+    LEVEL_FIELDS.passerby.forEach((key) => expect(full[key], key).toBe(npc[key]));
+  });
+
+  it('keeps what a recurring NPC already shows', () => {
+    const npc = { ...passerby(), level: 'recurring' };
+    const full = completeNpc(npc, P);
+    LEVEL_FIELDS.recurring.forEach((key) => expect(full[key], key).toBe(npc[key]));
+  });
+
+  it('rolls the fields not shown yet with the current filters', () => {
+    repeat(200, () => {
+      const full = completeNpc(passerby({ ...P, tone: 'comic' }), { ...P, tone: 'grim' });
+      TAGGED_DEEP.forEach((key) => {
+        expect(full[key].t === undefined || full[key].t === 'grim', key).toBe(true);
+      });
+    });
+  });
+
+  it('ties the new fields to the occupation of this NPC, not the filter', () => {
+    repeat(200, () => {
+      const npc = passerby({ ...P, occ: 'law' });
+      const full = completeNpc(npc, { ...P, occ: 'shady' });
+      expect(full.occupation).toBe(npc.occupation);
+      TAGGED_DEEP.forEach((key) => {
+        expect(full[key].c === undefined || full[key].c === 'law', key).toBe(true);
+      });
+      expect(full.combat.stat).toBe(npc.occupation.stat);
+    });
+  });
+
+  it('leaves locked hidden fields as they are', () => {
+    const npc = passerby();
+    const full = completeNpc(npc, P, { secret: true });
+    expect(full.secret).toBe(npc.secret);
+  });
+
+  it('keeps AI text on what was shown and drops it elsewhere', () => {
+    const line = (text) => ({ text, lang: 'ru' });
+    const npc = {
+      ...passerby(),
+      ai: { want: line('Уйти'), quote: line('Эй'), secret: line('Тайна') },
+    };
+    expect(completeNpc(npc, P).ai).toEqual({ want: line('Уйти'), quote: line('Эй') });
   });
 });
 

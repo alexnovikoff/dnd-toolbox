@@ -9,6 +9,7 @@ import { COPY } from './copy.js';
 
 const COPIED_MS = 1500;
 const HINT_MAX = 200;
+const small = { fontSize: 12, padding: '8px 13px', whiteSpace: 'nowrap' };
 
 const CARD = {
   background: 'var(--ds-panel)',
@@ -87,9 +88,8 @@ function FieldActions({ k, st }) {
   );
 }
 
-function FieldValue({ k, st, revealed, onReveal }) {
+function FieldValue({ k, st }) {
   const { npc, lang } = st;
-  const t = COPY[lang];
   const text = fieldText(npc, k, lang);
   const textStyle = {
     fontSize: 13.5,
@@ -97,25 +97,7 @@ function FieldValue({ k, st, revealed, onReveal }) {
     color: 'var(--ds-text)',
     textWrap: 'pretty',
   };
-  const linkStyle = {
-    justifySelf: 'start',
-    border: 'none',
-    background: 'transparent',
-    padding: 0,
-    cursor: 'pointer',
-    fontFamily: SANS,
-    fontSize: 12.5,
-    fontWeight: 600,
-    color: 'var(--ds-accent)',
-  };
 
-  if (k === 'secret' && !revealed) {
-    return (
-      <button style={linkStyle} onClick={() => onReveal(true)}>
-        {t.reveal}
-      </button>
-    );
-  }
   if (Array.isArray(text)) {
     return (
       <ul style={{ ...textStyle, margin: 0, paddingLeft: 16 }}>
@@ -127,19 +109,10 @@ function FieldValue({ k, st, revealed, onReveal }) {
       </ul>
     );
   }
-  return (
-    <div style={textStyle}>
-      <span>{text}</span>
-      {k === 'secret' && (
-        <button style={{ ...linkStyle, marginLeft: 10 }} onClick={() => onReveal(false)}>
-          {t.hide}
-        </button>
-      )}
-    </div>
-  );
+  return <div style={textStyle}>{text}</div>;
 }
 
-function FieldRow({ k, st, revealed, onReveal }) {
+function FieldRow({ k, st }) {
   const { npc, lang } = st;
   const byAi = npc.ai?.[k]?.lang === lang;
   return (
@@ -171,7 +144,7 @@ function FieldRow({ k, st, revealed, onReveal }) {
           </span>
         )}
       </div>
-      <FieldValue k={k} st={st} revealed={revealed} onReveal={onReveal} />
+      <FieldValue k={k} st={st} />
       <FieldActions k={k} st={st} />
     </div>
   );
@@ -258,7 +231,6 @@ function Actions({ st, asking, onAsk, aiButtonRef }) {
     : Object.values(npc.ai || {}).some((a) => a.lang === lang)
       ? t.aiAgain
       : t.ai;
-  const small = { fontSize: 12, padding: '8px 13px', whiteSpace: 'nowrap' };
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 14 }}>
@@ -311,11 +283,41 @@ function Actions({ st, asking, onAsk, aiButtonRef }) {
   );
 }
 
+// Shown above the card while the NPC belongs to the current crowd.
+export function CrowdBar({ st }) {
+  const t = COPY[st.lang];
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        marginBottom: 10,
+      }}
+    >
+      <Button
+        variant="secondary"
+        icon={<Icon name="back" size={13} />}
+        onClick={() => st.setView('crowd')}
+        style={small}
+      >
+        {t.back}
+      </Button>
+      {st.npc.level !== 'key' && (
+        <Button icon={<Icon name="dice" size={14} />} onClick={st.makeFull} style={small}>
+          {t.makeFull}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function NpcCard({ st }) {
   const { npc, lang } = st;
   const t = COPY[lang];
   const [asking, setAsking] = useState(false);
-  const [revealed, setRevealed] = useState(false);
   const aiButtonRef = useRef(null);
 
   const visible = LEVEL_FIELDS[npc.level];
@@ -407,7 +409,7 @@ export function NpcCard({ st }) {
               {section[lang]}
             </div>
             {keys.map((key) => (
-              <FieldRow key={key} k={key} st={st} revealed={revealed} onReveal={setRevealed} />
+              <FieldRow key={key} k={key} st={st} />
             ))}
           </section>
         );

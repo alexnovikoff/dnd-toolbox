@@ -83,12 +83,12 @@ A bilingual NPC generator for the GM (tag `#8a6cc0`, icon `npc`, group
   decides how much is shown, so a passer-by the players latch onto grows into a
   key NPC without a reroll.
   - _Прохожий:_ who, name, occupation, detail, manner, attitude, current want.
-  - _Постоянный:_ adds what they know, secret (hidden until clicked), leverage,
-    background, hook.
+  - _Постоянный:_ adds what they know, secret, leverage, background, hook.
   - _Ключевой:_ adds what happens if the party stays out of it, what they can
     offer, what works in conversation, allies and enemies, stock SRD stat block.
-- **Filters, all optional:** occupation circle, race, gender, tone. They apply
-  to the next roll and never reroll the current NPC.
+- **Filters, all optional:** occupation circle (nine of them), race (eleven),
+  gender, tone (everyday, grim, comic, mystic). They apply to the next roll and
+  never reroll the current NPC.
 - **Fit over randomness:** entries can be tagged by tone (`t`) and occupation
   circle (`c`). `pickFit` only draws entries that fit and favours the specific
   ones, which is what keeps table-rolled NPCs coherent.
@@ -104,7 +104,10 @@ A bilingual NPC generator for the GM (tag `#8a6cc0`, icon `npc`, group
   are left alone. AI text is an overlay stored per field with its language, so
   «Вернуть таблицы» restores the draft and other languages show the table text.
   Quota/BYOK rules are the same as Character Forge. See [[API Proxy|API-Proxy]].
-- **Crowd:** several passers-by per click; open any of them on the card.
+- **Crowd:** several passers-by per click; open any of them on the card. «Назад»
+  returns to the list, and edits made on the card stay with that person.
+  «Сгенерировать полноценного» builds the full form: everything already shown
+  stays, and the fields not shown yet are rolled then, with the current filters.
 - **My NPCs:** saved list with GM notes and plain-text copy. A saved NPC and the
   one on the card are the same person: edits reach both.
 - **State** (`params`, `lang`, `locks`, `view`, `crowdSize`, `npc`, `crowd`,

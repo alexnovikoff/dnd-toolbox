@@ -60,6 +60,8 @@ function metaLine(npc, lang) {
   return `${fieldText(npc, 'who', lang)} · ${fieldText(npc, 'occupation', lang)}`;
 }
 
+const levelName = (npc, lang) => D.levels.find((l) => l.id === npc.level)[lang];
+
 export function CrowdList({ st }) {
   const { people, lang } = st;
   const t = COPY[lang];
@@ -70,7 +72,10 @@ export function CrowdList({ st }) {
         <div key={npc.id} style={rowStyle(i === 0)}>
           <div style={{ minWidth: 0 }}>
             <div style={NAME_STYLE}>{fieldText(npc, 'name', lang)}</div>
-            <div style={META_STYLE}>{metaLine(npc, lang)}</div>
+            <div style={META_STYLE}>
+              {metaLine(npc, lang)}
+              {npc.level !== 'passerby' && ` · ${levelName(npc, lang)}`}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--ds-text)', marginTop: 7, lineHeight: 1.5 }}>
               {fieldText(npc, 'feature', lang)}
             </div>
@@ -103,13 +108,12 @@ export function SavedList({ st }) {
     <div style={LIST}>
       {library.map((npc, i) => {
         const name = fieldText(npc, 'name', lang);
-        const level = D.levels.find((l) => l.id === npc.level)[lang];
         return (
           <div key={npc.id} style={rowStyle(i === 0)}>
             <div style={{ minWidth: 0 }}>
               <div style={NAME_STYLE}>{name}</div>
               <div style={META_STYLE}>
-                {metaLine(npc, lang)} · {level}
+                {metaLine(npc, lang)} · {levelName(npc, lang)}
               </div>
               {npc.notes && (
                 <div

@@ -160,9 +160,9 @@ const GENS = {
   combat: genCombat,
 };
 
-function keepLockedAi(ai, locks) {
+function filterAi(ai, keep) {
   if (!ai) return null;
-  const kept = Object.fromEntries(Object.entries(ai).filter(([key]) => locks[key]));
+  const kept = Object.fromEntries(Object.entries(ai).filter(([key]) => keep(key)));
   return Object.keys(kept).length ? kept : null;
 }
 
@@ -179,7 +179,7 @@ export function generate(params, prev, locks = {}) {
   FIELD_KEYS.forEach((key) => {
     npc[key] = locks[key] && prev?.[key] ? prev[key] : GENS[key](params, npc);
   });
-  npc.ai = keepLockedAi(prev?.ai, locks);
+  npc.ai = filterAi(prev?.ai, (key) => locks[key]);
   return npc;
 }
 
@@ -205,6 +205,18 @@ export function rerollField(npc, key, params, locks = {}) {
   if (key === 'occupation' && !locks.combat) {
     next.combat = { ...next.combat, stat: value.stat };
   }
+  return next;
+}
+
+// completeNpc — the full form of an NPC. Whatever is already on the card stays;
+// the fields not shown yet are rolled now, so they follow the current filters.
+export function completeNpc(npc, params, locks = {}) {
+  const shown = new Set([...LEVEL_FIELDS[npc.level], 'quote']);
+  const next = { ...npc, level: 'key' };
+  FIELD_KEYS.forEach((key) => {
+    if (!shown.has(key) && !locks[key]) next[key] = GENS[key](params, next);
+  });
+  next.ai = filterAi(npc.ai, (key) => shown.has(key) || locks[key]);
   return next;
 }
 

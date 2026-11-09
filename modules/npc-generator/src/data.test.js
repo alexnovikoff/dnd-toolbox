@@ -17,7 +17,24 @@ const PLAIN_TABLES = ['knows', 'levers', 'offers', 'talks', 'ties', 'tactics'];
 const TEXT_TABLES = [...TAGGED_TABLES, ...PLAIN_TABLES];
 
 const CATS = D.occCategories.map((c) => c.id);
-const TONES = ['plain', 'grim', 'comic'];
+const TONES = ['plain', 'grim', 'comic', 'mystic'];
+// Small tables repeat themselves quickly at the table, so each has a floor.
+const MIN_SIZES = {
+  features: 150,
+  manners: 145,
+  moods: 30,
+  wants: 115,
+  knows: 60,
+  secrets: 100,
+  levers: 55,
+  backgrounds: 80,
+  hooks: 80,
+  plans: 75,
+  offers: 58,
+  talks: 48,
+  ties: 52,
+  tactics: 38,
+};
 const SRD_STATS = [
   'commoner',
   'guard',
@@ -67,7 +84,7 @@ describe('npc data tables', () => {
   it('uses only known tone and occupation tags', () => {
     for (const table of TEXT_TABLES) {
       for (const e of D[table]) {
-        if (e.t) expect(['grim', 'comic'], e.ru).toContain(e.t);
+        if (e.t) expect(['grim', 'comic', 'mystic'], e.ru).toContain(e.t);
         if (e.c) expect(CATS, e.ru).toContain(e.c);
       }
     }
@@ -88,9 +105,23 @@ describe('npc data tables', () => {
     for (const r of D.races) {
       expect(r.w, r.id).toBeGreaterThan(0);
       expect(r.age[0], r.id).toBeLessThan(r.age[1]);
-      expect(r.names.m.length, r.id).toBeGreaterThanOrEqual(6);
-      expect(r.names.f.length, r.id).toBeGreaterThanOrEqual(6);
+      expect(r.names.m.length, r.id).toBeGreaterThanOrEqual(12);
+      expect(r.names.f.length, r.id).toBeGreaterThanOrEqual(12);
       [...r.names.m, ...r.names.f, ...r.last].forEach(expectEntry);
+    }
+  });
+
+  it('never pairs a gendered adjective with a masculine-only job title', () => {
+    // «ночная сторож» reads wrong: the next word needs its own marker, a
+    // common-gender form like «староста» or «убийца», or be a short preposition
+    // («нищая у ворот», where the adjective is the job title itself).
+    const adjective = /\{(?:ый|ий|ой)\|ая\}/;
+    const agrees = /\{|[ая]$|^[а-я]{1,2}$/;
+    for (const o of D.occupations) {
+      const words = o.ru.split(' ');
+      words.forEach((word, i) => {
+        if (adjective.test(word) && words[i + 1]) expect(words[i + 1], o.ru).toMatch(agrees);
+      });
     }
   });
 
@@ -102,7 +133,7 @@ describe('npc data tables', () => {
       expectEntry(D.stats[o.stat]);
     }
     for (const c of CATS) {
-      expect(D.occupations.filter((o) => o.c === c).length, c).toBeGreaterThanOrEqual(10);
+      expect(D.occupations.filter((o) => o.c === c).length, c).toBeGreaterThanOrEqual(14);
     }
   });
 
@@ -112,10 +143,24 @@ describe('npc data tables', () => {
       for (const tone of TONES) {
         for (const cat of CATS) {
           const pool = D[table].filter((e) => fits(e, tone, cat));
-          expect(pool.length, `${table}/${tone}/${cat}`).toBeGreaterThanOrEqual(8);
+          const floor = table === 'moods' ? 12 : 20;
+          expect(pool.length, `${table}/${tone}/${cat}`).toBeGreaterThanOrEqual(floor);
         }
       }
     }
+  });
+
+  it('keeps every table large enough not to repeat itself', () => {
+    for (const [table, min] of Object.entries(MIN_SIZES)) {
+      expect(D[table].length, table).toBeGreaterThanOrEqual(min);
+    }
+    expect(D.occupations.length).toBeGreaterThanOrEqual(200);
+  });
+
+  it('covers a wide range of people', () => {
+    expect(D.occCategories.length).toBeGreaterThanOrEqual(9);
+    expect(D.races.length).toBeGreaterThanOrEqual(11);
+    expect(D.tones.map((t) => t.id)).toContain('mystic');
   });
 
   it('has enough facts for three distinct «knows» lines', () => {
