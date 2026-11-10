@@ -575,6 +575,20 @@ describe('loot-generator', () => {
       click('Очистить');
       expect(stored().picks).toEqual([]);
     });
+
+    it('keeps the list buttons above the rolls', () => {
+      seedState({
+        haul: null,
+        view: 'quick',
+        picks: [{ id: 'a', type: 'trinket', entry: e('Брелок-образец', 'Sample charm') }],
+      });
+      renderModule();
+      const roll = screen.getByText('Брелок-образец');
+      for (const name of ['Копировать всё', 'Очистить']) {
+        const position = button(name).compareDocumentPosition(roll);
+        expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+    });
   });
 
   describe('my finds', () => {

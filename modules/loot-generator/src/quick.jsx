@@ -106,7 +106,7 @@ function PickRow({ pick, st, first }) {
         gap: 12,
         alignItems: 'start',
         padding: '10px 0',
-        borderTop: first ? 'none' : '1px solid var(--ds-line2)',
+        borderTop: '1px solid var(--ds-line2)',
         animation: first ? 'ddtb-fadeIn .16s ease' : 'none',
       }}
     >
@@ -233,13 +233,10 @@ export function QuickPanel({ st }) {
         />
       </div>
 
-      <div style={{ ...PANEL, padding: '6px 22px 12px' }}>
+      <div style={{ ...PANEL, padding: '6px 22px' }}>
         {picks.length ? (
           <>
-            {picks.map((pick, i) => (
-              <PickRow key={pick.id} pick={pick} st={st} first={i === 0} />
-            ))}
-            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <div style={{ display: 'flex', gap: 8, padding: '6px 0 10px' }}>
               <Button variant="secondary" onClick={copyAll} style={small}>
                 {copied ? t.copied : t.quickCopyAll}
               </Button>
@@ -247,9 +244,12 @@ export function QuickPanel({ st }) {
                 {t.quickClear}
               </Button>
             </div>
+            {picks.map((pick, i) => (
+              <PickRow key={pick.id} pick={pick} st={st} first={i === 0} />
+            ))}
           </>
         ) : (
-          <div style={{ padding: '14px 0', fontSize: 13, color: 'var(--ds-muted)' }}>
+          <div style={{ padding: '14px 0 20px', fontSize: 13, color: 'var(--ds-muted)' }}>
             {t.quickEmpty}
           </div>
         )}
