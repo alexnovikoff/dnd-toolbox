@@ -7,8 +7,9 @@ import * as characterForge from '@dnd/character-forge';
 import * as tokenCreator from '@dnd/token-creator';
 import * as tavernBuilder from '@dnd/tavern-builder';
 import * as npcGenerator from '@dnd/npc-generator';
+import * as lootGenerator from '@dnd/loot-generator';
 
-export const MODULES = [characterForge, tokenCreator, tavernBuilder, npcGenerator];
+export const MODULES = [characterForge, tokenCreator, tavernBuilder, npcGenerator, lootGenerator];
 
 export const manifests = MODULES.map((m) => m.manifest);
 

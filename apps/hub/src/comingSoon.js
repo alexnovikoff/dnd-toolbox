@@ -3,15 +3,6 @@
 // real module ships, add it to registry.js and remove its placeholder here.
 export const COMING_SOON = [
   {
-    id: 'loot',
-    name: 'Loot Generator',
-    description: 'Клады и награды, сбалансированные по CR',
-    group: 'creation',
-    icon: 'loot',
-    accent: '#c9a84c',
-    status: 'soon',
-  },
-  {
     id: 'city',
     name: 'City Forge',
     description: 'Города, районы и враждующие фракции',

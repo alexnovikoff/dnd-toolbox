@@ -1,12 +1,13 @@
 # D&D Toolbox
 
 A hub of tools for D&D Game Masters, built as a **monorepo** with a shared design
-system and pluggable modules. Four tools ship today — **Character Forge** (AI
+system and pluggable modules. Five tools ship today — **Character Forge** (AI
 character generator), **Token Creator** (circular tokens with procedural frames),
 **Tavern Builder** (bilingual tavern generator with block locks and an
-AI-written read-aloud description) and **NPC Generator** (bilingual table-driven
-NPCs with an optional AI pass that ties them together) — with more slots already
-laid out in the launcher.
+AI-written read-aloud description), **NPC Generator** (bilingual table-driven
+NPCs with an optional AI pass that ties them together) and **Loot Generator**
+(bilingual hoards and rewards calibrated by danger band, with SRD magic items and
+an optional AI pass) — with more slots already laid out in the launcher.
 
 - **Stack:** pnpm workspaces · Vite + React 18 · JavaScript (JSX) · `react-router`
 - **Design system:** `@dnd/design-system` — the single source of styling (tokens,
@@ -32,6 +33,7 @@ dnd-toolbox/
 ├─ packages/design-system/   # @dnd/design-system — tokens, theme, icons, components
 └─ modules/
    ├─ character-forge/       # @dnd/character-forge
+   ├─ loot-generator/        # @dnd/loot-generator
    ├─ npc-generator/         # @dnd/npc-generator
    ├─ tavern-builder/        # @dnd/tavern-builder
    └─ token-creator/         # @dnd/token-creator
@@ -54,17 +56,17 @@ pnpm dev          # → http://localhost:5173
 ```
 
 `pnpm dev` runs the hub. All modules open from the launcher and work in both
-themes (Obsidian / Vellum) with all six accents. Token Creator, Tavern Builder
-and NPC Generator need no key (tavern and NPC generation is table-driven and
-local); Character Forge — and the optional AI steps in Tavern Builder and NPC
-Generator — need `ANTHROPIC_API_KEY` (they degrade to a clear error message
-without one).
+themes (Obsidian / Vellum) with all six accents. Token Creator, Tavern Builder,
+NPC Generator and Loot Generator need no key (their main rolls are table-driven
+and local); Character Forge — and the optional AI steps in Tavern Builder, NPC
+Generator and Loot Generator — need `ANTHROPIC_API_KEY` (they degrade to a clear
+error message without one).
 
 ### Local Claude Code mode (optional, personal)
 
 If you have [Claude Code](https://www.anthropic.com/claude-code) installed and
 logged in, dev can run the AI features (Character Forge, Tavern Builder's
-description, NPC Generator's AI step) on your Claude subscription instead of an
+description, the AI steps of NPC Generator and Loot Generator) on your Claude subscription instead of an
 API key: set
 `LOCAL_CLAUDE=1` in `apps/hub/.env` (no `ANTHROPIC_API_KEY` needed)
 and restart `pnpm dev`. Personal use only — it lives only in the Vite dev

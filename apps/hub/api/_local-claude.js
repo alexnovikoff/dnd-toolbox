@@ -12,6 +12,8 @@ import {
   buildTables,
   buildNpcDeepen,
   isValidNpcDeepen,
+  buildLootEnliven,
+  isValidLootEnliven,
   extractFields,
   REGEN_KEYS,
 } from './_core.js';
@@ -83,6 +85,7 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
     'forge_shadow',
     'forge_tables',
     'npc_deepen',
+    'loot_enliven',
   ].includes(body.mode)
     ? body.mode
     : 'full';
@@ -93,6 +96,9 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
     return { status: 400, json: { error: 'Invalid request.' } };
   }
   if (mode === 'npc_deepen' && !isValidNpcDeepen(body)) {
+    return { status: 400, json: { error: 'Invalid request.' } };
+  }
+  if (mode === 'loot_enliven' && !isValidLootEnliven(body)) {
     return { status: 400, json: { error: 'Invalid request.' } };
   }
   const spec =
@@ -108,7 +114,9 @@ export async function handleGenerateLocal({ body = {}, runClaude = defaultRunCla
               ? buildTables(body)
               : mode === 'npc_deepen'
                 ? buildNpcDeepen(body)
-                : buildFull(body);
+                : mode === 'loot_enliven'
+                  ? buildLootEnliven(body)
+                  : buildFull(body);
 
   let run;
   try {
