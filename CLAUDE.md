@@ -22,7 +22,7 @@ Workspaces: `apps/*`, `packages/*`, `modules/*` (`pnpm-workspace.yaml`).
 
 - `apps/hub` (`@dnd/hub`) — host: launcher, module shell, routing, server proxy.
 - `packages/design-system` (`@dnd/design-system`) — the **only** source of style.
-- `modules/*` — tools: `token-creator`, `character-forge`, `tavern-builder`.
+- `modules/*` — tools: `token-creator`, `character-forge`, `tavern-builder`, `npc-generator`.
 - `reference_sources/` — local-only originals (standalone apps + design handoffs)
   the modules were ported from; gitignored, never on GitHub.
 
@@ -82,7 +82,9 @@ validated against `REGEN_KEYS`); `forge_drives` / `forge_shadow` / `forge_tables
 `{ fields }` (Character Forge lens tabs — Drives & Fears / Shadow / «Три таблицы»
 worksheet; the tables tab uses a compressed length spec so 15 fields fit the 30s
 timeout); `tavern_enliven` (`{ facts, lang }`) → `{ text }` (Tavern Builder
-read-aloud description). One quota pool for all.
+read-aloud description); `npc_deepen` (`{ facts, level, keep, hint, gender, lang }`)
+→ `{ fields }` (NPC Generator, behind a Да/Нет question in the UI). One quota pool
+for all.
 
 Local alternative (personal): `LOCAL_CLAUDE=1` in `apps/hub/.env` serves dev
 `/api/generate` via the local Claude Code CLI (subscription auth; quota/BYOK
@@ -119,6 +121,11 @@ Smoke-check in dev (no key needed):
   every entry needs both locales and correct RU grammar (adjective gender forms, noun
   `g`/`ru24`/`enPl`, name `gen`) — `data.test.js` guards the shape. Both files stay
   prettier-ignored (hand-formatted); don't reformat.
+- npc-generator `src/tables/*.js`: hand-formatted, prettier-ignored. Every entry needs both
+  locales; mark every gendered Russian word with `{m|f}` (`Служил{|а}`) or phrase it in the
+  present tense. An entry that names a span of years or grown relatives needs `minYears`
+  (years since coming of age). Original text only (not copied from a rulebook), stat blocks
+  SRD names only. `data.test.js` guards the shape and every tone/occupation pool.
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
 - "Don't touch casually" zones: `frames.js` and character-forge `i18n.js` (10-language UI
   one-liners + ru/en roll tables; `i18n.test.js` guards the shape; prettier-ignored — keep

@@ -210,6 +210,99 @@ export function buildTavernEnliven(p) {
   };
 }
 
+// «Углубить с ИИ» (NPC Generator): the client sends the table draft, one line
+// per field; which fields get written and how stays here. Labels and questions
+// are in English; the model still replies in p.lang.
+const NPC_DRAFT_LABELS = {
+  name: 'Name',
+  who: 'Race, gender, age',
+  occupation: 'Occupation',
+  feature: 'Visual detail',
+  manner: 'Mannerism',
+  mood: 'Attitude toward the party',
+  want: 'Wants right now',
+  knows: 'Knows',
+  secret: 'Secret',
+  lever: 'Weak spot',
+  background: 'Background',
+  hook: 'Hook for the party',
+  plan: 'If left alone',
+  offer: 'Can offer',
+  talk: 'In conversation',
+  ties: 'Allies and enemies',
+  combat: 'In a fight',
+};
+const NPC_QUESTIONS = {
+  quote:
+    'One line the NPC actually says when the party first speaks to them, in their own voice. Just the words: no quotation marks, no stage directions.',
+  feature: 'The one visual detail the party notices first.',
+  manner: 'One physical habit or way of talking the GM can act out at the table.',
+  want: 'What the NPC wants right now, in this scene: something the party can help with or get in the way of.',
+  knows:
+    'Two or three concrete things the NPC knows that the party may need. A JSON array of short strings.',
+  secret: 'What the NPC hides. It must explain or complicate what they want right now.',
+  lever: 'The attachment or weakness that can be used to sway them.',
+  background: 'Only the part of their past that matters in play.',
+  hook: 'A concrete reason for the party to get involved with this NPC.',
+  plan: 'What the NPC will do on their own if the party does not step in, with a rough timeframe.',
+  offer: 'What the NPC can give the party: an item, access, information or a contact.',
+  talk: 'What works on them in conversation and what backfires.',
+  ties: 'One ally and one enemy of the NPC, each tied to what they want or hide.',
+};
+const NPC_SCENE = ['quote', 'feature', 'manner', 'want'];
+const NPC_DEPTH = ['knows', 'secret', 'lever', 'background', 'hook'];
+const NPC_PLOT = ['plan', 'offer', 'talk', 'ties'];
+const NPC_LEVELS = {
+  passerby: NPC_SCENE,
+  recurring: [...NPC_SCENE, ...NPC_DEPTH],
+  key: [...NPC_SCENE, ...NPC_DEPTH, ...NPC_PLOT],
+};
+const NPC_LINE_MAX = 400;
+const NPC_HINT_MAX = 200;
+
+const npcLine = (value) =>
+  typeof value === 'string' ? sanitize(value).slice(0, NPC_LINE_MAX) : '';
+
+export const isValidNpcDeepen = (body) => Boolean(npcLine(body?.facts?.name));
+
+export function buildNpcDeepen(p) {
+  const facts = p.facts || {};
+  const draft = Object.keys(NPC_DRAFT_LABELS)
+    .filter((key) => npcLine(facts[key]))
+    .map((key) => `- ${NPC_DRAFT_LABELS[key]}: ${npcLine(facts[key])}`)
+    .join('\n');
+  const hint = sanitize(p.hint).slice(0, NPC_HINT_MAX);
+  const note = hint ? `\nThe GM’s note about this NPC: ${hint}\n` : '';
+  // The quote is new text, not a draft field, so it can never be locked.
+  const kept = new Set(Array.isArray(p.keep) ? p.keep : []);
+  const fields = (NPC_LEVELS[p.level] || NPC_LEVELS.passerby).filter(
+    (key) => key === 'quote' || !kept.has(key)
+  );
+  const questions = fields.map((key) => `- "${key}": ${NPC_QUESTIONS[key]}`).join('\n');
+  const shape = `{${fields
+    .map((key) => (key === 'knows' ? '"knows":["...","..."]' : `"${key}":"..."`))
+    .join(',')}}`;
+  return {
+    max_tokens: 300 + fields.length * 100,
+    content: `You are helping a D&D game master prepare an NPC for play. The draft below was rolled on random tables, so its parts have nothing to do with each other. Turn it into one believable person whose details explain each other. Respond entirely in ${langName(p.lang)}.
+
+NPC draft:
+${draft}${genderNote(p.lang, p.gender)}
+${note}
+Every draft line that is not listed below stays true: do not contradict the name, race, age, occupation, attitude or anything else you are not asked to rewrite.
+
+Write only these fields. Each answer must be one short sentence the GM can take in at a glance during play (5-18 words), unless its description says otherwise:
+${questions}
+
+Make the parts connect: what they want should follow from who they are, the secret should complicate what they want, and the hook should give the party a concrete reason to step in. Invent no world-shaking events and keep place names generic.
+
+Respond ONLY with a valid JSON object (no markdown, no backticks), using exactly these keys:
+${shape}
+
+Be vivid, specific, avoid clichés.`,
+  };
+}
+
 // Pull the first {...} block out of a model reply and parse it.
 // Returns { fields } on success or { error } with the user-facing message.
 export function extractFields(raw) {
@@ -298,6 +391,7 @@ export async function handleGenerate({
     'forge_drives',
     'forge_shadow',
     'forge_tables',
+    'npc_deepen',
   ].includes(body.mode)
     ? body.mode
     : 'full';
@@ -305,6 +399,9 @@ export async function handleGenerate({
     return { status: 400, json: { error: 'Invalid section.' } };
   }
   if (mode === 'tavern_enliven' && !String(body.facts || '').trim()) {
+    return { status: 400, json: { error: 'Invalid request.' } };
+  }
+  if (mode === 'npc_deepen' && !isValidNpcDeepen(body)) {
     return { status: 400, json: { error: 'Invalid request.' } };
   }
 
@@ -319,7 +416,9 @@ export async function handleGenerate({
             ? buildShadow(body)
             : mode === 'forge_tables'
               ? buildTables(body)
-              : buildFull(body);
+              : mode === 'npc_deepen'
+                ? buildNpcDeepen(body)
+                : buildFull(body);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
