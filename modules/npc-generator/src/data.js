@@ -5,7 +5,7 @@ import { RACES } from './tables/names.js';
 import { OCC_CATEGORIES, OCCUPATIONS, STATS } from './tables/occupations.js';
 import { FEATURES, MANNERS, MOODS, WANTS } from './tables/scene.js';
 import { BACKGROUNDS, HOOKS, KNOWS, LEVERS, SECRETS } from './tables/depth.js';
-import { OFFERS, PLANS, TACTICS, TALKS, TIES } from './tables/plot.js';
+import { ALLIES, ENEMIES, OFFERS, PLANS, TACTICS, TALKS } from './tables/plot.js';
 
 export const NPC_DATA = {
   levels: [
@@ -40,6 +40,7 @@ export const NPC_DATA = {
   plans: PLANS,
   offers: OFFERS,
   talks: TALKS,
-  ties: TIES,
+  allies: ALLIES,
+  enemies: ENEMIES,
   tactics: TACTICS,
 };

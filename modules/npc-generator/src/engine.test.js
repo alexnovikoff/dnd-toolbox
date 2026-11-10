@@ -231,7 +231,8 @@ describe('rerollField', () => {
   });
 
   it('moves the combat profile with the occupation unless it is locked', () => {
-    const npc = generate({ ...P, occ: 'common' });
+    const tactic = D.tactics.find((e) => e.fighter === undefined);
+    const npc = { ...generate({ ...P, occ: 'common' }), combat: { stat: 'commoner', tactic } };
     const shady = { ...P, occ: 'shady' };
     const next = rerollField(npc, 'occupation', shady);
     expect(next.combat.stat).toBe(next.occupation.stat);
@@ -314,6 +315,288 @@ describe('completeNpc', () => {
       ai: { want: line('Уйти'), quote: line('Эй'), secret: line('Тайна') },
     };
     expect(completeNpc(npc, P).ai).toEqual({ want: line('Уйти'), quote: line('Эй') });
+  });
+});
+
+describe('how rolls are shared out', () => {
+  const FIELDS = [
+    'feature',
+    'manner',
+    'mood',
+    'want',
+    'secret',
+    'lever',
+    'background',
+    'hook',
+    'plan',
+    'offer',
+  ];
+  const ROLLS = 1500;
+
+  // The size of a table says little if a few entries take most of the rolls.
+  it.each(['any', 'plain'])('lets no entry take over an occupation circle (tone %s)', (tone) => {
+    for (const { id: occ } of D.occCategories) {
+      const tally = FIELDS.map(() => new Map());
+      repeat(ROLLS, () => {
+        const npc = generate({ ...P, occ, tone });
+        FIELDS.forEach((key, i) => tally[i].set(npc[key], (tally[i].get(npc[key]) ?? 0) + 1));
+      });
+      FIELDS.forEach((key, i) => {
+        const top = Math.max(...tally[i].values()) / ROLLS;
+        expect(top, `${occ}: ${key}`).toBeLessThan(0.13);
+      });
+    }
+  });
+
+  it('still favours entries written for the occupation', () => {
+    const own = repeat(ROLLS, () => generate({ ...P, occ: 'craft' }).want.c === 'craft');
+    // 8 of the 76 wants a craftsperson can draw are their own, so 10% if rolled evenly.
+    expect(own.filter(Boolean).length / ROLLS).toBeGreaterThan(0.3);
+  });
+
+  it('leaves room for ordinary entries when many are written for this NPC', () => {
+    const features = repeat(ROLLS, () => generate({ ...P, occ: 'law', tone: 'grim' }).feature);
+    // 24 of the 89 fitting details are specific: a 60% cap leaves ordinary ones about 29%.
+    expect(features.filter((e) => !e.c && !e.t).length / ROLLS).toBeGreaterThan(0.15);
+  });
+});
+
+describe('who can carry an entry', () => {
+  const HUMAN = { ...P, race: 'human' };
+  const FACIAL_HAIR = /beard in two braids|moustache waxed/;
+  const adultYears = (who) => who.age - D.races.find((r) => r.id === who.race.id).age[0];
+  const needsTwentyYears = () => D.backgrounds.find((e) => e.minYears === 20);
+  const beard = () => D.features.find((e) => FACIAL_HAIR.test(e.en));
+
+  it('respects the age bounds of every entry', () => {
+    let bound = 0;
+    repeat(3000, () => {
+      const npc = generate(HUMAN);
+      const years = adultYears(npc.who);
+      FIELD_KEYS.flatMap((key) => npc[key]).forEach(({ ru, minYears, maxYears }) => {
+        if (minYears === undefined && maxYears === undefined) return;
+        bound += 1;
+        expect(years, ru).toBeGreaterThanOrEqual(minYears ?? 0);
+        expect(years, ru).toBeLessThanOrEqual(maxYears ?? Infinity);
+      });
+    });
+    expect(bound).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['human', 'f'],
+    ['dwarf', 'f'],
+    ['elf', 'm'],
+    ['halfling', 'm'],
+  ])('grows no beard on %s %s', (race, gender) => {
+    repeat(1500, () => {
+      expect(generate({ ...P, race, gender }).feature.en).not.toMatch(FACIAL_HAIR);
+    });
+  });
+
+  it('still gives beards to the men who can grow them', () => {
+    const features = repeat(4000, () => generate({ ...P, race: 'dwarf', gender: 'm' }).feature.en);
+    expect(features.some((en) => FACIAL_HAIR.test(en))).toBe(true);
+  });
+
+  it('picks a new age that agrees with what the card already says', () => {
+    repeat(300, () => {
+      const npc = { ...generate(HUMAN), background: needsTwentyYears() };
+      expect(adultYears(rerollField(npc, 'who', HUMAN).who)).toBeGreaterThanOrEqual(20);
+    });
+  });
+
+  it('finds the one age that agrees with two bounds on the card', () => {
+    const plain = { ru: 'Нет условий', en: 'No conditions' };
+    const earlyGrey = D.features.find((e) => e.maxYears === 20);
+    repeat(100, () => {
+      const npc = {
+        ...generate(HUMAN),
+        feature: earlyGrey,
+        background: needsTwentyYears(),
+        want: plain,
+        secret: plain,
+        lever: plain,
+        talk: plain,
+      };
+      expect(adultYears(rerollField(npc, 'who', HUMAN, { feature: true }).who)).toBe(20);
+    });
+  });
+
+  it('keeps a locked beard on a man', () => {
+    repeat(300, () => {
+      const npc = { ...generate({ ...HUMAN, gender: 'm' }), feature: beard() };
+      expect(rerollField(npc, 'who', HUMAN, { feature: true }).who.gender).toBe('m');
+    });
+  });
+
+  it('lets a reroll change the gender even with a beard on the card', () => {
+    const genders = repeat(100, () => {
+      const npc = { ...generate({ ...HUMAN, gender: 'm' }), feature: beard() };
+      return rerollField(npc, 'who', HUMAN).who.gender;
+    });
+    expect(genders).toContain('f');
+  });
+
+  it('replaces a beard when a reroll makes the NPC a woman', () => {
+    repeat(300, () => {
+      const npc = { ...generate({ ...HUMAN, gender: 'm' }), feature: beard() };
+      const next = rerollField(npc, 'who', { ...HUMAN, gender: 'f' });
+      expect(next.who.gender).toBe('f');
+      expect(next.feature.en).not.toMatch(FACIAL_HAIR);
+    });
+  });
+
+  it('drops the AI text of a detail the new person cannot carry', () => {
+    const npc = {
+      ...generate({ ...HUMAN, gender: 'm' }),
+      feature: beard(),
+      ai: { feature: { text: 'Борода', lang: 'ru' }, want: { text: 'Уйти', lang: 'ru' } },
+    };
+    const next = rerollField(npc, 'who', { ...HUMAN, gender: 'f' });
+    expect(next.ai).toEqual({ want: { text: 'Уйти', lang: 'ru' } });
+  });
+
+  it('gives race-bound details to their own race only', () => {
+    repeat(1500, () => expect(generate(HUMAN).feature.raceOnly).toBeUndefined());
+    repeat(1500, () => {
+      const { raceOnly } = generate({ ...P, race: 'tiefling' }).feature;
+      expect(raceOnly === undefined || raceOnly === 'tiefling').toBe(true);
+    });
+  });
+
+  it('shows race-bound details often enough to notice', () => {
+    const details = repeat(1500, () => generate({ ...P, race: 'tiefling' }).feature.raceOnly);
+    expect(details.filter(Boolean).length / 1500).toBeGreaterThan(0.1);
+  });
+
+  describe('a detail bound to a race', () => {
+    const TIEFLING = { ...P, race: 'tiefling' };
+    const horns = () => D.features.find((e) => e.raceOnly === 'tiefling');
+
+    it('gives way when the race changes', () => {
+      const npc = { ...generate(TIEFLING), feature: horns() };
+      const next = rerollField(npc, 'who', HUMAN);
+      expect(next.who.race.id).toBe('human');
+      expect(next.feature.raceOnly).toBeUndefined();
+    });
+
+    it('stays when the race stays', () => {
+      const npc = { ...generate(TIEFLING), feature: horns() };
+      expect(rerollField(npc, 'who', TIEFLING).feature).toBe(npc.feature);
+    });
+
+    it('does not pin the race while it is unlocked', () => {
+      const npc = { ...generate(TIEFLING), feature: horns() };
+      const races = repeat(100, () => rerollField(npc, 'who', P).who.race.id);
+      expect(new Set(races).size).toBeGreaterThan(1);
+    });
+
+    it('holds the race while it is locked', () => {
+      const npc = { ...generate(TIEFLING), feature: horns() };
+      repeat(100, () => {
+        expect(rerollField(npc, 'who', P, { feature: true }).who.race.id).toBe('tiefling');
+      });
+    });
+
+    it('holds the race of a new NPC around a locked detail', () => {
+      const prev = { ...generate(TIEFLING), feature: horns() };
+      repeat(100, () => {
+        expect(generate(P, prev, { feature: true }).who.race.id).toBe('tiefling');
+      });
+    });
+  });
+
+  it('fits a new person around a locked entry', () => {
+    const prev = { ...generate(HUMAN), background: needsTwentyYears() };
+    repeat(300, () => {
+      const next = generate(HUMAN, prev, { background: true });
+      expect(next.background).toBe(prev.background);
+      expect(adultYears(next.who)).toBeGreaterThanOrEqual(20);
+    });
+  });
+
+  it('can still reroll a saved NPC younger than the current minimum age', () => {
+    const npc = generate({ ...P, race: 'orc' });
+    const saved = { ...npc, who: { ...npc.who, age: 12 } };
+    repeat(50, () => {
+      expect(rerollField(saved, 'background', P).background.ru.length).toBeGreaterThan(0);
+    });
+  });
+
+  it.each([
+    ['herbalist', 'Druid'],
+    ['hermit', 'Druid'],
+    ['pit fighter', 'Gladiator'],
+    ['street gang leader', 'Bandit Captain'],
+  ])('fights as the closest SRD profile: %s is a %s', (job, profile) => {
+    const occupation = D.occupations.find((o) => o.en === job);
+    const npc = generate(P, { occupation }, { occupation: true });
+    expect(fieldText(npc, 'combat', 'en')).toContain(`${profile} stat block`);
+  });
+});
+
+describe('what an NPC knows', () => {
+  it('stays within what their circle could know', () => {
+    repeat(300, () => {
+      const npc = generate(P);
+      npc.knows.forEach((e) => {
+        expect(e.c === undefined || e.c === npc.occupation.c, e.ru).toBe(true);
+      });
+    });
+  });
+
+  it('favours what their own circle knows', () => {
+    const own = repeat(800, () => {
+      return generate({ ...P, occ: 'wild' }).knows.filter((e) => e.c === 'wild').length;
+    });
+    // Rolled evenly, about 0.8 of the 3 facts would be their own.
+    expect(own.reduce((sum, n) => sum + n, 0) / 800).toBeGreaterThan(1.2);
+  });
+});
+
+describe('allies and enemies', () => {
+  const inCircle = (entry, occ) => entry.c === undefined || entry.c === occ;
+
+  it('names one ally and one enemy from the circle of the NPC', () => {
+    repeat(300, () => {
+      const npc = generate({ ...P, occ: 'wild' });
+      const ally = D.allies.find((e) => npc.ties.ru.startsWith(`${e.ru}, `));
+      const enemy = D.enemies.find((e) => npc.ties.ru.endsWith(`, ${e.ru}`));
+      expect(inCircle(ally, 'wild'), npc.ties.ru).toBe(true);
+      expect(inCircle(enemy, 'wild'), npc.ties.ru).toBe(true);
+    });
+  });
+
+  it('builds far more pairs than there are lines in either list', () => {
+    const pairs = repeat(1500, () => generate(P).ties.en);
+    expect(new Set(pairs).size).toBeGreaterThan(D.allies.length + D.enemies.length);
+  });
+});
+
+describe('how an NPC fights', () => {
+  const FARMER = D.occupations.find((o) => o.en === 'farmer');
+  const KNIGHT = D.occupations.find((o) => o.en === 'knight errant');
+  const rollAs = (occupation) => generate(P, { occupation }, { occupation: true });
+
+  it.each([
+    ['a farmer', FARMER, true],
+    ['a knight', KNIGHT, false],
+  ])('never gives %s the tactics of the other side', (_, occupation, wrong) => {
+    repeat(400, () => expect(rollAs(occupation).combat.tactic.fighter).not.toBe(wrong));
+  });
+
+  it('swaps only a tactic that the new occupation makes wrong', () => {
+    const tactic = D.tactics.find((e) => e.fighter === false);
+    const npc = { ...rollAs(FARMER), combat: { stat: 'commoner', tactic } };
+    repeat(300, () => {
+      const next = rerollField(npc, 'occupation', P);
+      if (D.stats[next.occupation.stat].fighter) {
+        expect(next.combat.tactic.fighter).not.toBe(false);
+      } else {
+        expect(next.combat.tactic).toBe(tactic);
+      }
+    });
   });
 });
 

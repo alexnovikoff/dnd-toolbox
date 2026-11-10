@@ -123,8 +123,9 @@ Smoke-check in dev (no key needed):
   prettier-ignored (hand-formatted); don't reformat.
 - npc-generator `src/tables/*.js`: hand-formatted, prettier-ignored. Every entry needs both
   locales; mark every gendered Russian word with `{m|f}` (`Служил{|а}`) or phrase it in the
-  present tense. Original text only (not copied from a rulebook), stat blocks SRD names only.
-  `data.test.js` guards the shape and every tone/occupation pool.
+  present tense. An entry that names a span of years or grown relatives needs `minYears`
+  (years since coming of age). Original text only (not copied from a rulebook), stat blocks
+  SRD names only. `data.test.js` guards the shape and every tone/occupation pool.
 - Root scripts call `pnpm` recursively → pnpm must be on PATH.
 - "Don't touch casually" zones: `frames.js` and character-forge `i18n.js` (10-language UI
   one-liners + ru/en roll tables; `i18n.test.js` guards the shape; prettier-ignored — keep

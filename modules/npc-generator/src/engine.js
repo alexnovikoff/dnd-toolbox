@@ -10,15 +10,6 @@ import { NPC_DATA as D } from './data.js';
 
 const rnd = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-function rndN(arr, n) {
-  const pool = arr.slice();
-  const out = [];
-  while (out.length < n && pool.length) {
-    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-  }
-  return out;
-}
-
 function weighted(list) {
   let r = Math.random() * list.reduce((sum, item) => sum + item.w, 0);
   for (const item of list) {
@@ -78,33 +69,91 @@ export const FIELD_LABELS = {
 };
 
 // ── picking from the tables ──
-function fits(entry, { tone, cat }) {
-  return (!entry.c || entry.c === cat) && (tone === 'any' || !entry.t || entry.t === tone);
+const raceById = (id) => D.races.find((r) => r.id === id);
+
+// Years count from coming of age, so "twenty years" asks the same of a human
+// and an elf. Clamped because a saved NPC can be younger than today's minimum.
+function personOf(who) {
+  const race = raceById(who.race.id);
+  return { race, gender: who.gender, years: Math.max(0, who.age - race.age[0]) };
 }
 
-// Entries written for this occupation or tone are drawn more often than the
-// generic ones, which is what keeps a table-rolled NPC from feeling random.
+function suits(entry, { race, gender, years }) {
+  if (entry.raceOnly && entry.raceOnly !== race.id) return false;
+  if (entry.hair && race.scaly) return false;
+  if (entry.beard && (gender === 'f' || race.beardless)) return false;
+  return years >= (entry.minYears ?? 0) && years <= (entry.maxYears ?? Infinity);
+}
+
+function fits(entry, { tone, cat, person, fighter }) {
+  return (
+    (!entry.c || entry.c === cat) &&
+    (tone === 'any' || !entry.t || entry.t === tone) &&
+    (entry.fighter === undefined || entry.fighter === fighter) &&
+    suits(entry, person)
+  );
+}
+
+// Entries written for this occupation, race or tone are drawn more often than
+// the generic ones, which is what keeps a table-rolled NPC from feeling random.
+// Their share grows with their number, so two such entries can't take over.
+const SHARE_PER_SPECIFIC = 0.05;
+const MAX_SPECIFIC_SHARE = 0.6;
+
 function pickFit(table, ctx) {
   const pool = table.filter((entry) => fits(entry, ctx));
   const specific = pool.filter(
-    (entry) => entry.c === ctx.cat || (ctx.tone !== 'any' && entry.t === ctx.tone)
+    (entry) => entry.c === ctx.cat || entry.raceOnly || (ctx.tone !== 'any' && entry.t === ctx.tone)
   );
-  return rnd(specific.length && Math.random() < 0.6 ? specific : pool);
+  const share = Math.min(MAX_SPECIFIC_SHARE, specific.length * SHARE_PER_SPECIFIC);
+  return rnd(Math.random() < share ? specific : pool);
 }
 
-const ctxOf = (params, npc) => ({ tone: params.tone, cat: npc.occupation.c });
+const ctxOf = (params, npc) => ({
+  tone: params.tone,
+  cat: npc.occupation.c,
+  person: personOf(npc.who),
+});
 const fitted = (table) => (params, npc) => pickFit(table, ctxOf(params, npc));
-const raceById = (id) => D.races.find((r) => r.id === id);
 
-function genWho(params) {
-  const race = raceById(params.race) || weighted(D.races);
-  const gender = params.gender === 'm' || params.gender === 'f' ? params.gender : rnd(['m', 'f']);
+// ageRange — the ages of this race that agree with the entries on the card.
+function ageRange(race, held) {
   const [lo, hi] = race.age;
+  const from = Math.max(lo, ...held.map((entry) => lo + (entry.minYears ?? 0)));
+  const to = Math.min(hi, ...held.map((entry) => lo + (entry.maxYears ?? Infinity)));
+  return from <= to ? [from, to] : race.age;
+}
+
+function rollWho(params, held) {
+  const bound = held.find((entry) => entry.raceOnly)?.raceOnly;
+  const race = raceById(params.race) || raceById(bound) || weighted(D.races);
+  const gender = params.gender === 'm' || params.gender === 'f' ? params.gender : rnd(['m', 'f']);
+  const [lo, hi] = ageRange(race, held);
   return {
     race: { id: race.id, ru: race.ru, en: race.en },
     gender,
     age: lo + Math.floor(Math.random() * (hi - lo + 1)),
   };
+}
+
+function canCarryAll(entries, who) {
+  const person = personOf(who);
+  return entries.every((entry) => suits(entry, person));
+}
+
+// genWho — a person who can still carry what the card already holds: the locked
+// fields of a new roll, or everything else when only this field is rerolled.
+// The age is picked to fit; retries are for a race or gender that can't carry
+// an entry. A demand the filters make impossible just ends with the last try.
+function genWho(params, npc) {
+  const held = FIELD_KEYS.flatMap((key) => npc[key] ?? []);
+  let who;
+  let tries = 0;
+  do {
+    who = rollWho(params, held);
+    tries += 1;
+  } while (tries < 32 && !canCarryAll(held, who));
+  return who;
 }
 
 function genName(_params, npc) {
@@ -121,22 +170,32 @@ function genOccupation(params) {
   return rnd(pool);
 }
 
-function genFeature(params, npc) {
-  const scaly = raceById(npc.who.race.id)?.scaly;
-  const table = scaly ? D.features.filter((e) => !e.hair) : D.features;
-  return pickFit(table, ctxOf(params, npc));
+const KNOWS_COUNT = 3;
+
+function genKnows(params, npc) {
+  const ctx = ctxOf(params, npc);
+  const known = [];
+  while (known.length < KNOWS_COUNT) {
+    const rest = D.knows.filter((entry) => !known.includes(entry));
+    known.push(pickFit(rest, ctx));
+  }
+  return known;
 }
 
-const genKnows = (params, npc) => {
+// Two independent lists give far more pairs than a table of ready-made lines.
+function genTies(params, npc) {
   const ctx = ctxOf(params, npc);
-  return rndN(
-    D.knows.filter((e) => fits(e, ctx)),
-    3
-  );
-};
+  const ally = pickFit(D.allies, ctx);
+  const enemy = pickFit(D.enemies, ctx);
+  return { ru: `${ally.ru}, ${enemy.ru}`, en: `${ally.en}, ${enemy.en}` };
+}
+
+const isFighter = (stat) => Boolean(D.stats[stat].fighter);
 
 function genCombat(params, npc) {
-  return { stat: npc.occupation.stat, tactic: pickFit(D.tactics, ctxOf(params, npc)) };
+  const { stat } = npc.occupation;
+  const ctx = { ...ctxOf(params, npc), fighter: isFighter(stat) };
+  return { stat, tactic: pickFit(D.tactics, ctx) };
 }
 
 // Listed in dependency order: who → name, occupation → everything tagged by it.
@@ -144,7 +203,7 @@ const GENS = {
   who: genWho,
   name: genName,
   occupation: genOccupation,
-  feature: genFeature,
+  feature: fitted(D.features),
   manner: fitted(D.manners),
   mood: fitted(D.moods),
   want: fitted(D.wants),
@@ -156,7 +215,7 @@ const GENS = {
   plan: fitted(D.plans),
   offer: fitted(D.offers),
   talk: fitted(D.talks),
-  ties: fitted(D.ties),
+  ties: genTies,
   combat: genCombat,
 };
 
@@ -176,8 +235,12 @@ function dropAi(ai, key) {
 // generate(params, prev?, locks?) — a new NPC; locked fields come from prev.
 export function generate(params, prev, locks = {}) {
   const npc = { id: newId(), level: params.level };
+  // Locked fields go in first, so that a new person is rolled to fit them.
   FIELD_KEYS.forEach((key) => {
-    npc[key] = locks[key] && prev?.[key] ? prev[key] : GENS[key](params, npc);
+    if (locks[key] && prev?.[key]) npc[key] = prev[key];
+  });
+  FIELD_KEYS.forEach((key) => {
+    if (!npc[key]) npc[key] = GENS[key](params, npc);
   });
   npc.ai = filterAi(prev?.ai, (key) => locks[key]);
   return npc;
@@ -186,14 +249,18 @@ export function generate(params, prev, locks = {}) {
 const sameValue = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // rerollField — re-rolls one field of the same NPC. A new race or gender needs
-// a matching name, and a new occupation a matching stat block, unless the
-// dependent field is locked.
+// a matching name, a detail of the body has to suit the new person, and a new
+// occupation needs a matching stat block and tactic, unless the dependent field
+// is locked.
 export function rerollField(npc, key, params, locks = {}) {
   const next = { ...npc, ai: dropAi(npc.ai, key) };
+  // An unlocked detail follows the person instead of pinning their race or gender.
+  const detailFollows = key === 'who' && !locks.feature;
+  const context = detailFollows ? { ...next, feature: null } : next;
   let value;
   let tries = 0;
   do {
-    value = GENS[key](params, next);
+    value = GENS[key](params, context);
     tries += 1;
   } while (tries < 16 && sameValue(value, npc[key]));
   next[key] = value;
@@ -202,8 +269,14 @@ export function rerollField(npc, key, params, locks = {}) {
     const sameRace = value.race.id === npc.who.race.id;
     if (!sameRace || value.gender !== npc.who.gender) next.name = GENS.name(params, next);
   }
+  if (detailFollows && !suits(next.feature, personOf(value))) {
+    next.feature = GENS.feature(params, next);
+    next.ai = dropAi(next.ai, 'feature');
+  }
   if (key === 'occupation' && !locks.combat) {
-    next.combat = { ...next.combat, stat: value.stat };
+    const { tactic } = next.combat;
+    const tacticStays = tactic.fighter === undefined || tactic.fighter === isFighter(value.stat);
+    next.combat = tacticStays ? { ...next.combat, stat: value.stat } : GENS.combat(params, next);
   }
   return next;
 }

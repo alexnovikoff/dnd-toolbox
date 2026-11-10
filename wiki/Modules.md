@@ -91,12 +91,23 @@ A bilingual NPC generator for the GM (tag `#8a6cc0`, icon `npc`, group
   never reroll the current NPC.
 - **Fit over randomness:** entries can be tagged by tone (`t`) and occupation
   circle (`c`). `pickFit` only draws entries that fit and favours the specific
-  ones, which is what keeps table-rolled NPCs coherent.
+  ones, which is what keeps table-rolled NPCs coherent. Each specific entry adds
+  5% to their share, up to 60%, so a circle with two of them can't repeat them
+  on every other roll.
+- **Who can carry an entry:** `minYears` and `maxYears` count years since coming
+  of age, `raceOnly` ties a detail to one race, `hair` skips scaly races, `beard`
+  skips women and beardless races, and `fighter` splits tactics between those who
+  fight for a living and those who don't. A rerolled person is picked to agree
+  with what the card holds; an unlocked detail that no longer suits them is
+  replaced instead of pinning their race or gender.
+- **Allies and enemies:** two lists joined into one line, tagged by occupation
+  circle like «Знает», so a forester and a court schemer keep different company.
 - **Russian grammar:** `{m|f}` markers (`Служил{|а}`, `сборщи{к|ца}`) resolve at
   display time from the NPC's gender. Write new entries in the present tense
   or mark every gendered word.
 - **Locks + rerolls:** per field. A new race or gender also renames the NPC and
-  a new occupation moves the stat block, unless those fields are locked.
+  a new occupation moves the stat block and swaps a tactic that no longer fits,
+  unless those fields are locked.
 - **AI step («Углубить с ИИ»):** the button appears only once an NPC exists and
   every run goes through a Да/Нет question with an optional hint. Via the server
   proxy (`mode: "npc_deepen"` → `{ fields }`). It ties the draft into one person
