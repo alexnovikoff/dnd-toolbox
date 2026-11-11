@@ -11,7 +11,7 @@ how the pieces fit together and how to extend them.
 - **[Design System](Design-System)** — tokens, themes, accents, components, and the rules.
 - **[Adding a Module](Adding-a-Module)** — the 3-step recipe for a new tool.
 - **[API Proxy](API-Proxy)** — the server-side Anthropic proxy (Variant A), env, dev vs prod.
-- **[Modules](Modules)** — notes on Character Forge, Token Creator, Tavern Builder and NPC Generator.
+- **[Modules](Modules)** — notes on Character Forge, Token Creator, Tavern Builder, NPC Generator and Loot Generator.
 
 ## TL;DR
 

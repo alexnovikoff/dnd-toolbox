@@ -1,0 +1,18 @@
+{
+  "name": "@dnd/loot-generator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Loot Generator — bilingual table-driven treasure for the GM, calibrated by danger band, with an optional Claude pass that ties the find together.",
+  "main": "src/index.jsx",
+  "exports": {
+    ".": "./src/index.jsx"
+  },
+  "dependencies": {
+    "@dnd/design-system": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

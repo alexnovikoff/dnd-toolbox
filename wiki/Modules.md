@@ -124,8 +124,48 @@ A bilingual NPC generator for the GM (tag `#8a6cc0`, icon `npc`, group
 - **State** (`params`, `lang`, `locks`, `view`, `crowdSize`, `npc`, `crowd`,
   `saved`) persists in localStorage under `ddtb_npc`.
 
+## Loot Generator (`@dnd/loot-generator`)
+
+Bilingual treasure for the GM (tag `#c9a84c`, icon `loot`, group `creation`). The
+main roll is instant and free; AI is an optional extra step.
+
+- **Four kinds of find:** hoard, dragon's lair (two rolls of treasure), quest
+  reward (one hoard by party level, paid by someone, with terms and a catch) and
+  off the bodies (per-creature coins plus odd pocket finds, no story, no AI).
+- **Calibration, not copied tables:** `src/tables/tiers.js` holds our own
+  structure aimed at the published 2024 averages: a hoard of about 500 / 4,400 /
+  36,000 / 330,000 gp by danger band, personal treasure of about 10 / 90 / 1,100 /
+  9,000 gp per creature, 1.5 / 1.9 / 2.5 / 3.1 magic items a hoard, rarity by band.
+  `engine.test.js` rolls thousands of hoards and keeps those averages within 12%.
+- **Lumpy on purpose:** a value is drawn around the target (thin finds, the odd
+  windfall), then split by theme between coins, gems, art and goods. Sections spend
+  their share in whole pieces and the change falls back to coins, so the average
+  holds. Some hoards have no coins at all.
+- **Themes:** any, arcane (gems, scrolls), martial (coins, bars, arms), trade
+  (goods, utility items), relic (art). They decide the mix and lean the item pick.
+- **Magic items:** every non-artifact item of SRD 5.2.1 with its rarity, plus our
+  own one-line summary and a rolled detail on each. Weapons, armor, damage types
+  and spells are rolled so the line is usable as written. The licence notice sits
+  in the params column; keep it word for word.
+- **Rolling one thing:** «По отдельности» rolls a single coin purse, gem, art
+  object, trinket, potion, scroll or item, with its own filters.
+- **Locks + rerolls:** per section and per item. Rerolls use the find's own
+  settings, not the current filters. The value shown to the party is split by the
+  party size at display time, so changing it never rerolls.
+- **AI step («Оживить с ИИ»):** only for finds with a story, always through a
+  Да/Нет question with an optional hint. Via the server proxy
+  (`mode: "loot_enliven"` → `{ fields }`). It writes a read-aloud description, ties
+  the story lines together and gives each item a detail; coins, gems and items
+  themselves are never touched. AI text is an overlay per field with its language,
+  so «Вернуть таблицы» restores the draft. Quota/BYOK rules are the same as
+  Character Forge. See [[API Proxy|API-Proxy]].
+- **My finds:** saved list with GM notes and plain-text copy. A saved find and the
+  one on the card are the same find: edits reach both.
+- **State** (`params`, `lang`, `locks`, `view`, `haul`, `saved`, `picks`,
+  `quickOpts`) persists in localStorage under `ddtb_loot`.
+
 ## Coming soon
 
-Placeholders in `apps/hub/src/comingSoon.js` (Loot Generator, City Forge) render
+Placeholders in `apps/hub/src/comingSoon.js` (City Forge) render
 on the launcher and sidebar. Build one by following
 [[Adding a Module|Adding-a-Module]] and removing its placeholder.

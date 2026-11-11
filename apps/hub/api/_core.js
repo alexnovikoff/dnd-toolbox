@@ -303,6 +303,99 @@ Be vivid, specific, avoid clichés.`,
   };
 }
 
+// «Оживить с ИИ» (Loot Generator): the client sends the table draft, one line
+// per section; which fields get written and how stays here. Coins, gems and
+// items stay exactly what the tables rolled: the model only writes the story.
+const LOOT_DRAFT_LABELS = {
+  title: 'Name',
+  summary: 'What and how big',
+  coins: 'Coins',
+  gems: 'Gems',
+  art: 'Art objects',
+  goods: 'Trade goods',
+  origin: 'Who it comes from',
+  place: 'Where it lies',
+  guard: 'What stands in the way',
+  hook: 'Hook for the party',
+  form: 'How it is paid',
+  perk: 'What comes on top of the money',
+  catch: 'The catch',
+};
+const LOOT_QUESTIONS = {
+  read: 'Two or three sentences of read-aloud description for the moment the party first sees this. Show what they see, hear and smell; name no game terms and no prices.',
+  origin: 'Who this came from and why it ended up here.',
+  place: 'Exactly where it is, as a concrete spot the party can find.',
+  guard: 'The one thing standing between the party and this, tied to how it got here.',
+  hook: 'A concrete reason this find pulls the party into something further.',
+  form: 'How the money actually changes hands.',
+  perk: 'What the party is offered beyond the money, in keeping with who is paying.',
+  catch: 'The complication that comes with accepting this.',
+  marks:
+    'For each magic item listed, in the same order: one short detail of how it came to be here or what marks it out. A JSON array of strings, one per item.',
+};
+const LOOT_STORY = {
+  hoard: ['origin', 'place', 'guard', 'hook'],
+  dragon: ['origin', 'place', 'guard', 'hook'],
+  reward: ['origin', 'form', 'perk', 'catch'],
+};
+const LOOT_LINE_MAX = 400;
+const LOOT_ITEMS_MAX = 14;
+const LOOT_HINT_MAX = 200;
+
+const lootLine = (value) =>
+  typeof value === 'string' ? sanitize(value).slice(0, LOOT_LINE_MAX) : '';
+
+export const isValidLootEnliven = (body) =>
+  Boolean(LOOT_STORY[body?.kind]) && Boolean(lootLine(body?.facts?.title));
+
+export function buildLootEnliven(p) {
+  const facts = p.facts || {};
+  const draft = Object.keys(LOOT_DRAFT_LABELS)
+    .filter((key) => lootLine(facts[key]))
+    .map((key) => `- ${LOOT_DRAFT_LABELS[key]}: ${lootLine(facts[key])}`)
+    .join('\n');
+  const items = (Array.isArray(facts.items) ? facts.items : [])
+    .map(lootLine)
+    .filter(Boolean)
+    .slice(0, LOOT_ITEMS_MAX);
+  const itemList = items.length
+    ? `\n\nMagic items, in order:\n${items.map((line, i) => `${i + 1}. ${line}`).join('\n')}`
+    : '';
+  const hint = sanitize(p.hint).slice(0, LOOT_HINT_MAX);
+  const note = hint ? `\nThe GM’s note about this find: ${hint}\n` : '';
+  const kept = new Set(Array.isArray(p.keep) ? p.keep : []);
+  const fields = [
+    'read',
+    ...LOOT_STORY[p.kind].filter((key) => !kept.has(key)),
+    ...(items.length ? ['marks'] : []),
+  ];
+  const questions = fields.map((key) => `- "${key}": ${LOOT_QUESTIONS[key]}`).join('\n');
+  const shape = `{${fields
+    .map((key) =>
+      key === 'marks' ? `"marks":[${items.map(() => '"..."').join(',')}]` : `"${key}":"..."`
+    )
+    .join(',')}}`;
+  return {
+    max_tokens: 400 + fields.length * 90 + items.length * 50,
+    content: `You are helping a D&D game master present a find to the players. The draft below was rolled on random tables, so its parts have nothing to do with each other. Turn it into one believable find whose details explain each other. Respond entirely in ${langName(p.lang)}.
+
+Find draft:
+${draft}${itemList}
+${note}
+Everything in the draft stays true. Do not add, remove, rename or reprice coins, gems, art, goods or magic items, and do not change what an item does.
+
+Write only these fields. Each answer must be one short sentence the GM can take in at a glance during play (5-18 words), unless its description says otherwise:
+${questions}
+
+Make the parts connect: what is here should follow from who gathered it, and the complication should come from the same story. Invent no world-shaking events and keep place names generic.
+
+Respond ONLY with a valid JSON object (no markdown, no backticks), using exactly these keys:
+${shape}
+
+Be vivid, specific, avoid clichés.`,
+  };
+}
+
 // Pull the first {...} block out of a model reply and parse it.
 // Returns { fields } on success or { error } with the user-facing message.
 export function extractFields(raw) {
@@ -392,6 +485,7 @@ export async function handleGenerate({
     'forge_shadow',
     'forge_tables',
     'npc_deepen',
+    'loot_enliven',
   ].includes(body.mode)
     ? body.mode
     : 'full';
@@ -402,6 +496,9 @@ export async function handleGenerate({
     return { status: 400, json: { error: 'Invalid request.' } };
   }
   if (mode === 'npc_deepen' && !isValidNpcDeepen(body)) {
+    return { status: 400, json: { error: 'Invalid request.' } };
+  }
+  if (mode === 'loot_enliven' && !isValidLootEnliven(body)) {
     return { status: 400, json: { error: 'Invalid request.' } };
   }
 
@@ -418,7 +515,9 @@ export async function handleGenerate({
               ? buildTables(body)
               : mode === 'npc_deepen'
                 ? buildNpcDeepen(body)
-                : buildFull(body);
+                : mode === 'loot_enliven'
+                  ? buildLootEnliven(body)
+                  : buildFull(body);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

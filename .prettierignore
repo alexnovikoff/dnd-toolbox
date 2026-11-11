@@ -9,6 +9,8 @@ modules/tavern-builder/src/data.js
 modules/tavern-builder/src/engine.js
 # NPC Generator content tables — hand-formatted, one entry per line.
 modules/npc-generator/src/tables/
+# Loot Generator content tables — hand-formatted, one entry per line.
+modules/loot-generator/src/tables/
 # Hand-formatted i18n tables — one long line per language, preserved verbatim.
 modules/character-forge/src/i18n.js
 # Local-only reference sources (gitignored) — keep originals byte-faithful.

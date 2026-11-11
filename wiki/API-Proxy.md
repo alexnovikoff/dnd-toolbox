@@ -37,17 +37,28 @@ The client sends **parameters only** — never a model id, raw messages, or a ke
 { "mode": "npc_deepen", "lang": "ru", "gender": "male", "level": "recurring",
   "facts": { "name": "Брам Кожевник", "want": "…", "secret": "…" },
   "keep": ["secret"], "hint": "связан с контрабандистами" }
+
+// tie a table-rolled find together (Loot Generator «Оживить с ИИ»)
+{ "mode": "loot_enliven", "lang": "ru", "kind": "hoard",
+  "facts": { "title": "Казна вольного отряда", "coins": "…", "place": "…",
+             "items": ["Плащ защиты: +1 к КД и спасброскам."] },
+  "keep": ["place"], "hint": "это склад культа" }
 ```
 
 Response for `full`/`section`:
 `{ "fields": { backstory, personality, goals, flaws, secret_desire } }`;
 for `tavern_enliven`: `{ "text": "…" }` (2–3 sentences of plain prose); for
 `npc_deepen`: `{ "fields": { quote, feature, manner, want, … } }`, the fields of
-the `level` minus `keep` (`knows` is an array of strings). All add
+the `level` minus `keep` (`knows` is an array of strings); for `loot_enliven`:
+`{ "fields": { read, origin, place, guard, hook, marks } }` (a quest reward has
+`form`, `perk`, `catch` in place of `place`, `guard`, `hook`), the story minus
+`keep`, with `marks` an array of strings in the order of `facts.items`. All add
 `"remaining": n` on free-tier calls; errors are `{ "error": "…", "code"?: "…" }`
 with an appropriate HTTP status. All modes share one free-tier quota pool.
 `npc_deepen` takes only known fact keys and caps each line (400 chars, hint 200),
-and a request without `facts.name` is a `400`.
+and a request without `facts.name` is a `400`. `loot_enliven` does the same, caps
+the item list at 14, and answers `400` without `facts.title` or for a `kind` that
+has no story.
 
 The server constructs the prompt (`langName`, gendered-language note, length
 spec), calls `claude-sonnet-4-6`, and extracts the JSON object from the reply.
